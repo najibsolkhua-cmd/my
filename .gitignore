@@ -9,3 +9,5 @@ dist-single
 *.p12
 *.keystore
 *.tsbuildinfo
+docs/*.html
+docs/*.png

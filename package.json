@@ -9,7 +9,8 @@
     "build:single": "tsc -b && vite build --mode single",
     "preview": "vite preview",
     "test": "vitest run",
-    "typecheck": "tsc -b"
+    "typecheck": "tsc -b",
+    "wiki": "WIKI_OUT=docs/kapital-wiki.html vitest run wiki && node scripts/wiki-pdf.cjs docs/kapital-wiki.html docs/kapital-wiki.pdf"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.2",

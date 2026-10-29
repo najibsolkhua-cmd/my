@@ -67,9 +67,10 @@ describe('награды', () => {
     expect(a.find((x) => x.id === 'h10')!.done).toBe(true)
     expect(a.find((x) => x.id === 'h100')!.value).toBe(10)
   })
-  it('68 наград с разными id, все в известных группах', () => {
+  it('70 наград с разными id, все в известных группах', () => {
     const list = achievements(base(), '2026-10-29')
-    expect(new Set(list.map((a) => a.id)).size).toBe(68)
+    expect(new Set(list.map((a) => a.id)).size).toBe(70)
+    expect(list.filter((a) => a.secret)).toHaveLength(6)
     for (const a of list) expect(GROUPS).toContain(a.group)
   })
   it('старые награды сохранились', () => {
@@ -88,6 +89,9 @@ describe('награды', () => {
     expect(a.find((x) => x.id === 'fri13')!.done).toBe(true) // 13.11.2026 — пятница
     expect(a.find((x) => x.id === 'lucky')!.done).toBe(true)
     expect(a.find((x) => x.id === 'newyear')!.done).toBe(false)
+    const b = achievements(base({ incomes: [income('2026-10-29', 10_000), income('2026-10-29', 500), { ...income('2026-10-29', 700), id: 'x3' }] }), '2026-10-29')
+    expect(b.find((x) => x.id === 'bullseye')!.done).toBe(true)
+    expect(b.find((x) => x.id === 'hattrick')!.done).toBe(true)
   })
   it('камбэк после перерыва в неделю', () => {
     const a = achievements(base({ incomes: [income('2026-10-01', 1), income('2026-10-09', 1)] }), '2026-10-29')
@@ -97,7 +101,8 @@ describe('награды', () => {
 
 describe('перенос на новую лестницу', () => {
   it('старые номера уровней указывают на те же названия', () => {
-    const old = ['Нищий', 'Работяга', 'Офисный планктон', 'Менеджер', 'Топ-менеджер', 'Малый предприниматель', 'Предприниматель', 'Инвестор', 'Магнат', 'Бизнесмен']
+    // старые «Топ-менеджер» и «Малый предприниматель» переименованы, порог тот же
+    const old = ['Нищий', 'Работяга', 'Офисный планктон', 'Менеджер', 'Король планёрок', 'Стартапер', 'Предприниматель', 'Инвестор', 'Магнат', 'Бизнесмен']
     old.forEach((name, i) => expect(LEVELS[OLD_TO_NEW_LEVEL[i]].name).toBe(name))
   })
   it('копия старой версии восстанавливается с правильным уровнем', () => {

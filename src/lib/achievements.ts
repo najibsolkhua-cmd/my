@@ -111,6 +111,8 @@ export function achievements(d: AppData, now: DateStr): Achievement[] {
   const maxWeekSources = Math.max(0, ...[...weekSources.values()].map((s) => s.size))
   const growth = growthRun(d)
   const expenseCats = new Set(d.expenses.map((x) => x.categoryId)).size
+  const countByDay = new Map<string, number>()
+  for (const x of d.incomes) countByDay.set(x.date, (countByDay.get(x.date) ?? 0) + 1)
   const ownCats = d.categories.filter((c) => !c.id.startsWith('c-')).length
   const yes = (v: boolean) => (v ? 1 : 0)
   const earned = new Set(d.earned ?? [])
@@ -202,10 +204,10 @@ export function achievements(d: AppData, now: DateStr): Achievement[] {
       [
         { id: 'lvl2', title: 'Золотые руки', hint: 'Дойди до уровня «Работяга»', icon: 'Hammer', tier: 'bronze', value: level, target: 2 },
         { id: 'lvl3', title: 'Карьерист', hint: 'Дойди до уровня «Менеджер»', icon: 'Briefcase', tier: 'silver', value: level, target: 5 },
-        { id: 'lvl5', title: 'Своё дело', hint: 'Дойди до «Малый предприниматель»', icon: 'Store', tier: 'gold', value: level, target: 7 },
-        { id: 'lvl8', title: 'Тугой кошелёк', hint: 'Дойди до «Денежный мешок»', icon: 'Banknote', tier: 'gold', value: level, target: 8 },
-        { id: 'lvl11', title: 'Акула', hint: 'Дойди до «Волк с Уолл-стрит»', icon: 'Swords', tier: 'diamond', value: level, target: 11 },
-        { id: 'lvl13', title: 'Нырок в золото', hint: 'Дойди до «Скрудж Макдак»', icon: 'Waves', tier: 'diamond', value: level, target: 13 },
+        { id: 'lvl5', title: 'Своё дело', hint: 'Дойди до уровня «Стартапер»', icon: 'Store', tier: 'gold', value: level, target: 7 },
+        { id: 'lvl8', title: 'Тугой кошелёк', hint: 'Дойди до уровня «Денежный мешок»', icon: 'Banknote', tier: 'gold', value: level, target: 8 },
+        { id: 'lvl11', title: 'Акула', hint: 'Дойди до уровня «Волк с Уолл-стрит»', icon: 'Swords', tier: 'diamond', value: level, target: 11 },
+        { id: 'lvl13', title: 'Несокрушимый', hint: 'Дойди до уровня «Титан»', icon: 'Mountain', tier: 'diamond', value: level, target: 13 },
         { id: 'lvl9', title: 'Король', hint: 'Дойди до уровня «Бизнесмен»', icon: 'Crown', tier: 'diamond', value: level, target: 14 },
         { id: 'growth', title: 'На взлёт', hint: 'Неделя лучше предыдущей', icon: 'TrendingUp', tier: 'bronze', value: growth, target: 2, unit: 'нед' },
         { id: 'rocket', title: 'Ракета', hint: '4 недели подряд каждая лучше прошлой', icon: 'Rocket', tier: 'gold', value: growth, target: 4, unit: 'нед' },
@@ -232,6 +234,8 @@ export function achievements(d: AppData, now: DateStr): Achievement[] {
         { id: 'fri13', title: 'Пятница, 13-е', hint: 'Заработай в пятницу 13-го', icon: 'Dices', tier: 'gold', secret: true, value: yes(d.incomes.some((x) => x.date.endsWith('-13') && parseDate(x.date).getDay() === 5)), target: 1 },
         { id: 'newyear', title: 'Новогодний', hint: 'Заработай 31 декабря или 1 января', icon: 'Snowflake', tier: 'gold', secret: true, value: yes(d.incomes.some((x) => /-(12-31|01-01)$/.test(x.date))), target: 1 },
         { id: 'lucky', title: 'Счастливчик', hint: 'Сумма дохода с цифрами 777', icon: 'Clover', tier: 'silver', secret: true, value: yes(d.incomes.some((x) => String(x.amount).includes('777'))), target: 1 },
+        { id: 'bullseye', title: 'В яблочко', hint: 'Запиши доход ровно 10 000 ₽', icon: 'Target', tier: 'bronze', secret: true, value: yes(d.incomes.some((x) => x.amount === 10_000)), target: 1 },
+        { id: 'hattrick', title: 'Хет-трик', hint: 'Три записи дохода за один день', icon: 'Sparkles', tier: 'bronze', secret: true, value: yes(Math.max(0, ...[...countByDay.values()]) >= 3), target: 1 },
         { id: 'midnight', title: 'Полуночник', hint: 'Запиши доход между полуночью и 5 утра', icon: 'Moon', tier: 'silver', secret: true, value: yes(d.incomes.some((x) => x.createdAt > 0 && new Date(x.createdAt).getHours() < 5)), target: 1 },
       ],
     ],
