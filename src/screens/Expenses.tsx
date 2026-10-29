@@ -5,6 +5,7 @@ import { Donut } from '../components/Donut'
 import { Icon } from '../components/Icon'
 import { OpRow } from '../components/OpRow'
 import { PeriodBar } from '../components/PeriodBar'
+import { usePaged } from '../components/ShowMore'
 import { useToday } from '../hooks'
 import { humanDate, weekdayShort } from '../lib/dates'
 import { compact, money } from '../lib/format'
@@ -33,8 +34,9 @@ export function Expenses() {
     return m
   }, [inPeriod])
   const sorted = [...categories].filter((c) => byCat.get(c.id)).sort((a, b) => byCat.get(b.id)! - byCat.get(a.id)!)
-  const visible = filter ? inPeriod.filter((x) => x.categoryId === filter) : inPeriod
-  const groups = groupByDate(visible)
+  const visible = useMemo(() => (filter ? inPeriod.filter((x) => x.categoryId === filter) : inPeriod), [inPeriod, filter])
+  const groups = useMemo(() => groupByDate(visible), [visible])
+  const paged = usePaged(groups, 10, `${filter}-${period.kind}-${period.offset}`)
   const share = incTotal > 0 ? Math.round((total / incTotal) * 100) : null
 
   return (
@@ -128,7 +130,7 @@ export function Expenses() {
           )}
         </div>
         {groups.length === 0 && <p className="muted center pad">Записей нет</p>}
-        {groups.map(([date, items]) => (
+        {paged.visible.map(([date, items]) => (
           <div key={date} className="day">
             <div className="day-head">
               <span>
@@ -142,6 +144,7 @@ export function Expenses() {
             })}
           </div>
         ))}
+        {paged.more}
       </section>
     </div>
   )

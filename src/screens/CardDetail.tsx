@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react'
 import { BarChart } from '../components/BarChart'
 import { IncomeCard } from '../components/IncomeCard'
 import { PeriodBar } from '../components/PeriodBar'
+import { usePaged } from '../components/ShowMore'
 import { cardColor } from '../data/palette'
 import { clock, useNow, useToday } from '../hooks'
 import { humanDate, weekdayShort } from '../lib/dates'
@@ -26,7 +27,8 @@ export function CardDetail({ sourceId }: { sourceId: string }) {
   const inPeriod = useMemo(() => filterRange(incomes, range), [incomes, range.start, range.end])
   const st = workStats(inPeriod)
   const total = workStats(incomes)
-  const groups = groupByDate(inPeriod)
+  const groups = useMemo(() => groupByDate(inPeriod), [inPeriod])
+  const { visible, more } = usePaged(groups, 10, `${period.kind}-${period.offset}`)
 
   if (!source) return null
   const c = cardColor(source.color)
@@ -49,7 +51,7 @@ export function CardDetail({ sourceId }: { sourceId: string }) {
   })
 
   return (
-    <div className="detail" style={{ ['--card' as string]: c.bg }}>
+    <div className="detail" style={{ ['--card' as string]: c.base }}>
       <header className="top detail-top">
         <button className="icon-btn" onClick={close} aria-label="Назад">
           <ChevronLeft size={22} />
@@ -114,7 +116,7 @@ export function CardDetail({ sourceId }: { sourceId: string }) {
             labels={range.buckets.map((b) => b.label)}
             titles={range.buckets.map((b) => bucketTitle(b, period.kind, today, humanDate))}
             current={currentBucket(range.buckets, today)}
-            series={[{ name: mode === 'money' ? 'Доход' : 'Часы', color: c.bg, values, format: mode === 'money' ? (v) => money(v) : (v) => duration(v * 60) }]}
+            series={[{ name: mode === 'money' ? 'Доход' : 'Часы', color: c.base, values, format: mode === 'money' ? (v) => money(v) : (v) => duration(v * 60) }]}
           />
         </section>
 
@@ -126,7 +128,7 @@ export function CardDetail({ sourceId }: { sourceId: string }) {
             </small>
           </div>
           {groups.length === 0 && <p className="muted center pad">За этот период записей нет</p>}
-          {groups.map(([date, items]) => {
+          {visible.map(([date, items]) => {
             const day = workStats(items)
             return (
               <div key={date} className="day">
@@ -151,6 +153,7 @@ export function CardDetail({ sourceId }: { sourceId: string }) {
               </div>
             )
           })}
+          {more}
         </section>
       </div>
     </div>

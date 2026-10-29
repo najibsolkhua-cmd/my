@@ -55,3 +55,18 @@ export interface Shift {
   sourceId: string
   startedAt: number
 }
+
+export interface Settings {
+  /** главный переключатель уведомлений */
+  notifications: boolean
+  /** вечернее напоминание записать доход */
+  daily: boolean
+  /** время напоминания, 'ЧЧ:ММ' */
+  dailyTime: string
+  /** напоминать, если смена идёт долго */
+  shiftAlerts: boolean
+  /** итоги недели по понедельникам */
+  weekly: boolean
+  /** таймер смены на экране блокировки / в Dynamic Island / в шторке */
+  liveActivity: boolean
+}

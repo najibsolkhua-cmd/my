@@ -1,9 +1,10 @@
 import { create } from 'zustand'
-import { createJSONStorage, persist } from 'zustand/middleware'
+import { createJSONStorage, persist, type StateStorage } from 'zustand/middleware'
 import { DEFAULT_CATEGORIES } from './data/defaults'
 import { round2 } from './lib/format'
 import { uid } from './lib/ids'
-import type { Category, Expense, Goal, Income, Shift, Source } from './types'
+import { isNative } from './platform'
+import type { Category, Expense, Goal, Income, Settings, Shift, Source } from './types'
 
 export interface AppData {
   sources: Source[]
@@ -16,6 +17,20 @@ export interface AppData {
   seenLevel: number
   /** лучший уровень за всё время */
   bestLevel: number
+  /** полученные награды; null — ещё не считали (после обновления приложения) */
+  earned: string[] | null
+  /** счётчики для наград */
+  counters: { shifts: number; longestShift: number }
+  settings: Settings
+}
+
+export const DEFAULT_SETTINGS: Settings = {
+  notifications: false,
+  daily: true,
+  dailyTime: '21:00',
+  shiftAlerts: true,
+  weekly: true,
+  liveActivity: true,
 }
 
 type New<T> = Omit<T, 'id' | 'createdAt'>
@@ -41,11 +56,37 @@ interface Actions {
   stopShift: () => { sourceId: string; minutes: number } | null
   cancelShift: () => void
   setSeenLevel: (n: number) => void
+  setEarned: (ids: string[]) => void
+  setSettings: (patch: Partial<Settings>) => void
   replaceAll: (data: AppData) => void
   resetAll: () => void
 }
 
 export const FALLBACK_CATEGORY = 'c-other'
+
+// В приложении на телефоне данные лежат в системном хранилище (UserDefaults / SharedPreferences):
+// его не чистит система, и оно попадает в резервную копию телефона.
+// При первом запуске подхватываем то, что раньше было в localStorage.
+const nativeStorage: StateStorage = {
+  getItem: async (name) => {
+    const { Preferences } = await import('@capacitor/preferences')
+    const { value } = await Preferences.get({ key: name })
+    if (value !== null) return value
+    try {
+      return localStorage.getItem(name)
+    } catch {
+      return null
+    }
+  },
+  setItem: async (name, value) => {
+    const { Preferences } = await import('@capacitor/preferences')
+    await Preferences.set({ key: name, value })
+  },
+  removeItem: async (name) => {
+    const { Preferences } = await import('@capacitor/preferences')
+    await Preferences.remove({ key: name })
+  },
+}
 
 export const initialData = (): AppData => ({
   sources: [],
@@ -56,6 +97,9 @@ export const initialData = (): AppData => ({
   shift: null,
   seenLevel: 0,
   bestLevel: 0,
+  earned: null,
+  counters: { shifts: 0, longestShift: 0 },
+  settings: { ...DEFAULT_SETTINGS },
 })
 
 const clean = (n: number) => round2(Math.max(0, n))
@@ -108,21 +152,34 @@ export const useStore = create<AppData & Actions>()(
 
       startShift: (sourceId) => set({ shift: { sourceId, startedAt: Date.now() } }),
       stopShift: () => {
-        const { shift } = get()
+        const { shift, counters } = get()
         if (!shift) return null
-        set({ shift: null })
-        return { sourceId: shift.sourceId, minutes: Math.max(1, Math.round((Date.now() - shift.startedAt) / 60000)) }
+        const minutes = Math.max(1, Math.round((Date.now() - shift.startedAt) / 60000))
+        set({ shift: null, counters: { shifts: counters.shifts + 1, longestShift: Math.max(counters.longestShift, minutes) } })
+        return { sourceId: shift.sourceId, minutes }
       },
       cancelShift: () => set({ shift: null }),
 
       setSeenLevel: (n) => set((st) => ({ seenLevel: n, bestLevel: Math.max(st.bestLevel, n) })),
-      replaceAll: (data) => set({ ...initialData(), ...data }),
-      resetAll: () => set(initialData()),
+      setEarned: (ids) => set({ earned: ids }),
+      setSettings: (patch) => set((st) => ({ settings: { ...st.settings, ...patch } })),
+      // настройки — свойство телефона, а не данных: при восстановлении копии их не трогаем
+      replaceAll: (data) => set((st) => ({ ...initialData(), ...data, settings: st.settings, shift: null })),
+      resetAll: () => set((st) => ({ ...initialData(), settings: st.settings })),
     }),
     {
       name: 'kapital-data',
-      version: 1,
-      storage: createJSONStorage(() => localStorage),
+      version: 2,
+      storage: createJSONStorage(() => (isNative ? nativeStorage : localStorage)),
+      migrate: (persisted, version) => {
+        const st = (persisted ?? {}) as Partial<AppData>
+        if (version < 2) {
+          st.earned = null
+          st.counters = { shifts: 0, longestShift: 0 }
+        }
+        st.settings = { ...DEFAULT_SETTINGS, ...(st.settings ?? {}) }
+        return st as AppData
+      },
       partialize: (st): AppData => ({
         sources: st.sources,
         incomes: st.incomes,
@@ -132,6 +189,9 @@ export const useStore = create<AppData & Actions>()(
         shift: st.shift,
         seenLevel: st.seenLevel,
         bestLevel: st.bestLevel,
+        earned: st.earned,
+        counters: st.counters,
+        settings: st.settings,
       }),
     },
   ),
@@ -140,8 +200,8 @@ export const useStore = create<AppData & Actions>()(
 /** Достаёт только данные (без функций) — для экспорта. */
 export function snapshot(): AppData {
   const st = useStore.getState()
-  const { sources, incomes, categories, expenses, goals, shift, seenLevel, bestLevel } = st
-  return { sources, incomes, categories, expenses, goals, shift, seenLevel, bestLevel }
+  const { sources, incomes, categories, expenses, goals, shift, seenLevel, bestLevel, earned, counters, settings } = st
+  return { sources, incomes, categories, expenses, goals, shift, seenLevel, bestLevel, earned, counters, settings }
 }
 
 const isArr = Array.isArray
@@ -171,5 +231,8 @@ export function validateBackup(raw: unknown): AppData | string {
     shift: null,
     seenLevel: isNum(d.seenLevel) ? d.seenLevel : 0,
     bestLevel: isNum(d.bestLevel) ? d.bestLevel : 0,
+    earned: isArr(d.earned) ? d.earned.filter(isStr) : null,
+    counters: d.counters && isNum(d.counters.shifts) && isNum(d.counters.longestShift) ? d.counters : { shifts: 0, longestShift: 0 },
+    settings: { ...DEFAULT_SETTINGS },
   }
 }

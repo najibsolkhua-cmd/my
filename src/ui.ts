@@ -13,6 +13,7 @@ export type Layer =
   | { type: 'pickSource'; purpose: 'shift' | 'income' }
   | { type: 'settings' }
   | { type: 'card'; sourceId: string }
+  | { type: 'history' }
 
 interface Confirm {
   title: string

@@ -1,8 +1,7 @@
-import { Capacitor } from '@capacitor/core'
+import { isNative } from './platform'
 import { useUI } from './ui'
 
-/** Запущено как приложение на телефоне (APK), а не в браузере. */
-export const isNative = Capacitor.isNativePlatform()
+export { isNative }
 
 /** Системная кнопка «назад» Android: закрывает окно, потом ведёт на главную, потом выходит. */
 export async function setupNative() {
@@ -17,16 +16,33 @@ export async function setupNative() {
   })
 }
 
-/** Сохраняет файл: в браузере — скачиванием, в приложении — через меню «Поделиться». */
-export async function saveTextFile(name: string, text: string, mime: string) {
+/**
+ * Сохраняет файл без интернета. В приложении и на iPhone открывается системное меню
+ * «Поделиться» (там есть «Сохранить в Файлы», Telegram, почта), в остальных браузерах — скачивание.
+ * Возвращает false, если пользователь закрыл меню.
+ */
+export async function saveTextFile(name: string, text: string, mime: string): Promise<boolean> {
   if (isNative) {
     const { Filesystem, Directory, Encoding } = await import('@capacitor/filesystem')
     const { Share } = await import('@capacitor/share')
     const { uri } = await Filesystem.writeFile({ path: name, data: text, directory: Directory.Cache, encoding: Encoding.UTF8 })
-    await Share.share({ title: name, url: uri, dialogTitle: 'Сохранить резервную копию' })
-    return
+    try {
+      await Share.share({ title: name, url: uri, dialogTitle: 'Сохранить резервную копию' })
+      return true
+    } catch {
+      return false
+    }
   }
-  const url = URL.createObjectURL(new Blob([text], { type: mime }))
+  const file = new File([text], name, { type: mime })
+  if (navigator.canShare?.({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: name })
+      return true
+    } catch (e) {
+      if ((e as Error).name === 'AbortError') return false
+    }
+  }
+  const url = URL.createObjectURL(file)
   const a = document.createElement('a')
   a.href = url
   a.download = name
@@ -34,4 +50,5 @@ export async function saveTextFile(name: string, text: string, mime: string) {
   a.click()
   a.remove()
   setTimeout(() => URL.revokeObjectURL(url), 1000)
+  return true
 }

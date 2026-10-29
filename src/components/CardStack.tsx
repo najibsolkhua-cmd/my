@@ -36,7 +36,7 @@ export function CardStack({ sources, stats }: { sources: Source[]; stats: Map<st
             rate={st.rate}
             live={shift?.sourceId === s.id}
             className={`stack-card ${i === a ? 'active' : ''}`}
-            style={{ transform: `translateY(${top(i)}px) scale(${i === a ? 1 : 0.97})`, zIndex: i + 1 }}
+            style={{ transform: `translateY(${top(i)}px)`, zIndex: i + 1 }}
             onClick={() => (i === a ? open({ type: 'card', sourceId: s.id }) : setActive(i))}
           />
         )

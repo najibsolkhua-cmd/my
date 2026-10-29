@@ -29,7 +29,7 @@ export function IncomeCard({ source, total, minutes, rate, live, className = '',
       tabIndex={onClick ? 0 : undefined}
       onKeyDown={onClick ? (e) => (e.key === 'Enter' || e.key === ' ') && onClick() : undefined}
     >
-      <CardPattern pattern={source.pattern} color={c.accent} />
+      <CardPattern pattern={source.pattern} color={c.accent} bg={c.base} />
       <div className="ccard-top">
         <div className="ccard-name">
           <b>{source.name || 'Без названия'}</b>

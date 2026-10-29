@@ -3,6 +3,8 @@ import { useUI } from '../ui'
 import type { Level } from '../lib/levels'
 import { LevelBadge } from './LevelBadge'
 import { money } from '../lib/format'
+import { TIER_NAMES, type Achievement } from '../lib/achievements'
+import { Icon } from './Icon'
 
 export function Toast() {
   const toast = useUI((s) => s.toast)
@@ -70,6 +72,24 @@ export function LevelUp({ level, onClose }: { level: Level; onClose: () => void 
         <p className="muted">Доход за 7 дней — от {money(level.min)}</p>
         <button className="btn primary wide" onClick={onClose}>
           Круто!
+        </button>
+      </div>
+    </div>
+  )
+}
+
+export function AchievementPopup({ a, more, onClose }: { a: Achievement; more: number; onClose: () => void }) {
+  return (
+    <div className="levelup" onClick={onClose}>
+      <div className="levelup-card" onClick={(e) => e.stopPropagation()}>
+        <div className="levelup-kicker">Новая награда · {TIER_NAMES[a.tier]}</div>
+        <span className={`ach-icon big tier-${a.tier}`}>
+          <Icon name={a.icon} size={44} />
+        </span>
+        <h2>{a.title}</h2>
+        <p className="muted">{a.hint}</p>
+        <button className="btn primary wide" onClick={onClose}>
+          {more > 0 ? `Дальше (ещё ${more})` : 'Забрать'}
         </button>
       </div>
     </div>

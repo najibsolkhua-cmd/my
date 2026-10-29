@@ -22,7 +22,7 @@ export function ShiftBanner() {
   }
 
   return (
-    <div className="shift" style={{ ['--c' as string]: c.bg }}>
+    <div className="shift" style={{ ['--c' as string]: c.base }}>
       <span className="shift-icon" style={{ background: c.bg, color: c.ink }}>
         <Icon name={source.icon} size={20} />
       </span>

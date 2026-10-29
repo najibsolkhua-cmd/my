@@ -5,7 +5,7 @@ import { LEVELS, levelFor, levelProgress } from '../levels'
 import { bestWeek, bucketSums, groupByDate, last7, periodRange, streak, workStats } from '../stats'
 import { goalProgress } from '../goals'
 import { validateBackup } from '../../store'
-import { demoData } from '../../data/demo'
+import { demoData } from './fixture'
 
 const inc = (date: string, amount: number, minutes = 0, createdAt = 0) => ({ date, amount, minutes, createdAt })
 

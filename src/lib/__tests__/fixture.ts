@@ -1,7 +1,7 @@
-import type { AppData } from '../store'
-import { initialData } from '../store'
-import { addDays, type DateStr } from '../lib/dates'
-import type { Expense, Income, Source } from '../types'
+import type { AppData } from '../../store'
+import { initialData } from '../../store'
+import { addDays, type DateStr } from '../dates'
+import type { Expense, Income, Source } from '../../types'
 
 // Детерминированный генератор, чтобы демо выглядело одинаково.
 function rng(seed: number) {

@@ -35,9 +35,9 @@
 
 ## Android-приложение (APK)
 
-APK собирается автоматически при каждом изменении в `main` и выкладывается в [Releases](https://github.com/najibsolkhua-cmd/my/releases/latest).
+APK собирается автоматически при каждом изменении в `main` и выкладывается в [Releases](https://github.com/najibsolkhua-cmd/my/releases).
 
-**Скачать:** https://github.com/najibsolkhua-cmd/my/releases/latest/download/Kapital.apk
+**Скачать:** https://github.com/najibsolkhua-cmd/my/releases/download/apk/Kapital.apk
 
 Подпись APK вычисляется из секрета `SIGNING_SEED` (Settings → Secrets and variables → Actions). Пока фраза та же, новая версия ставится поверх старой и данные сохраняются. Если фразу потерять или поменять, придётся удалить приложение и поставить заново, поэтому перед этим сохрани резервную копию.
 

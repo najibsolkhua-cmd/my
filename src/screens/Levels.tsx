@@ -3,7 +3,7 @@ import { Icon } from '../components/Icon'
 import { LevelBadge } from '../components/LevelBadge'
 import { Progress } from '../components/Progress'
 import { useToday } from '../hooks'
-import { achievements } from '../lib/achievements'
+import { TIER_NAMES, achievements } from '../lib/achievements'
 import { GOAL_KINDS, goalProgress } from '../lib/goals'
 import { compact, money, plural } from '../lib/format'
 import { LEVELS, levelFor, levelProgress } from '../lib/levels'
@@ -142,16 +142,31 @@ export function Levels() {
         </div>
         <div className="ach-grid">
           {ach.map((a) => (
-            <div key={a.id} className={`ach ${a.done ? 'done' : ''}`}>
-              <span className="ach-icon">
+            <div key={a.id} className={`ach tier-${a.tier} ${a.done ? 'done' : ''}`}>
+              <span className={`ach-icon tier-${a.tier}`}>
                 <Icon name={a.icon} size={22} />
               </span>
               <b>{a.title}</b>
               <small>{a.hint}</small>
+              {!a.done && a.target > 1 && (
+                <span className="ach-progress">
+                  <Progress value={a.value / a.target} height={4} />
+                  <small>
+                    {achNumber(a.value, a.unit)} / {achNumber(a.target, a.unit)}
+                  </small>
+                </span>
+              )}
+              {a.done && <span className="ach-tier">{TIER_NAMES[a.tier]}</span>}
             </div>
           ))}
         </div>
       </section>
     </div>
   )
+}
+
+function achNumber(v: number, unit?: string): string {
+  const n = Math.max(0, Math.floor(v))
+  if (unit === '₽') return `${compact(n)}`
+  return unit ? `${n} ${unit}` : String(n)
 }

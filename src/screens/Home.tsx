@@ -4,6 +4,7 @@ import { BarChart } from '../components/BarChart'
 import { Icon } from '../components/Icon'
 import { IncomeCard } from '../components/IncomeCard'
 import { LevelBadge } from '../components/LevelBadge'
+import { LogoMark } from '../components/LogoMark'
 import { OpRow } from '../components/OpRow'
 import { PeriodBar } from '../components/PeriodBar'
 import { Progress } from '../components/Progress'
@@ -60,11 +61,7 @@ export function Home() {
     <div className="screen">
       <header className="top">
         <div className="logo">
-          <span className="logo-mark">
-            <i />
-            <i />
-            <i />
-          </span>
+          <LogoMark />
           Капитал
         </div>
         <div className="top-actions">
@@ -92,7 +89,7 @@ export function Home() {
             Создать первую карту
           </button>
           <button className="btn ghost wide" onClick={() => open({ type: 'settings' })}>
-            Посмотреть на демо-данных
+            Восстановить из резервной копии
           </button>
         </section>
       ) : (
@@ -185,6 +182,11 @@ export function Home() {
           <section className="panel">
             <div className="panel-head">
               <h3>Последние операции</h3>
+              {recent.length > 0 && (
+                <button className="link" onClick={() => open({ type: 'history' })}>
+                  Вся история
+                </button>
+              )}
             </div>
             {recent.length === 0 && <p className="muted center pad">Здесь появятся твои доходы и расходы</p>}
             {recent.map(({ kind, x }) => {

@@ -1,12 +1,14 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { BottomNav } from './components/BottomNav'
-import { ConfirmHost, LevelUp, Toast } from './components/Overlays'
+import { AchievementPopup, ConfirmHost, LevelUp, Toast } from './components/Overlays'
 import { useToday } from './hooks'
+import { achievements } from './lib/achievements'
 import { LEVELS, levelFor } from './lib/levels'
 import { last7 } from './lib/stats'
 import { CardDetail } from './screens/CardDetail'
 import { Cards } from './screens/Cards'
 import { Expenses } from './screens/Expenses'
+import { History } from './screens/History'
 import { Home } from './screens/Home'
 import { Levels } from './screens/Levels'
 import { AddMenu } from './sheets/AddMenu'
@@ -19,6 +21,8 @@ import { Settings } from './sheets/Settings'
 import { SourceForm } from './sheets/SourceForm'
 import { useStore } from './store'
 import { useUI, type Layer } from './ui'
+
+const FULLSCREEN: Layer['type'][] = ['card', 'history']
 
 function renderLayer(l: Layer) {
   switch (l.type) {
@@ -40,16 +44,34 @@ function renderLayer(l: Layer) {
       return <Settings />
     case 'card':
       return <CardDetail sourceId={l.sourceId} />
+    case 'history':
+      return <History />
   }
 }
 
+/** Ждёт, пока данные загрузятся из хранилища телефона. */
+function useHydrated() {
+  const [ready, setReady] = useState(() => useStore.persist.hasHydrated())
+  useEffect(() => {
+    const unsub = useStore.persist.onFinishHydration(() => setReady(true))
+    setReady(useStore.persist.hasHydrated())
+    return unsub
+  }, [])
+  return ready
+}
+
 export function App() {
+  const ready = useHydrated()
+  return ready ? <Main /> : null
+}
+
+function Main() {
   const tab = useUI((s) => s.tab)
   const layers = useUI((s) => s.layers)
-  const incomes = useStore((s) => s.incomes)
-  const seenLevel = useStore((s) => s.seenLevel)
+  const data = useStore()
   const now = useToday()
-  const level = levelFor(last7(incomes, now))
+  const level = levelFor(last7(data.incomes, now))
+  const [queue, setQueue] = useState<string[]>([])
 
   // Кнопка «назад» закрывает верхнюю шторку / экран.
   useEffect(() => {
@@ -60,32 +82,51 @@ export function App() {
 
   // Уровень упал — тихо запоминаем, чтобы при следующем росте снова был праздник.
   useEffect(() => {
-    if (level.index < seenLevel) useStore.getState().setSeenLevel(level.index)
-  }, [level.index, seenLevel])
+    if (level.index < data.seenLevel) data.setSeenLevel(level.index)
+  }, [level.index, data.seenLevel])
+
+  // Новые награды: запоминаем навсегда и показываем по одной.
+  const ach = useMemo(() => achievements(data, now), [data.incomes, data.expenses, data.sources, data.goals, data.counters, data.bestLevel, data.earned, now])
+  useEffect(() => {
+    const done = ach.filter((a) => a.done).map((a) => a.id)
+    if (data.earned === null) {
+      data.setEarned(done) // первый запуск после обновления — без салюта за старые заслуги
+      return
+    }
+    const fresh = done.filter((id) => !data.earned!.includes(id))
+    if (fresh.length) {
+      data.setEarned([...data.earned, ...fresh])
+      setQueue((q) => [...q, ...fresh])
+    }
+  }, [ach])
 
   // Блокируем прокрутку фона, пока открыта шторка.
-  const sheetOpen = layers.some((l) => l.type !== 'card')
+  const sheetOpen = layers.some((l) => !FULLSCREEN.includes(l.type))
   useEffect(() => {
     document.body.classList.toggle('locked', sheetOpen)
   }, [sheetOpen])
 
-  // Экран карты — полноэкранный слой; поверх него могут быть шторки.
-  const lastCard = layers.map((l) => l.type).lastIndexOf('card')
+  // Полноэкранный слой (карта, история) — поверх него могут быть шторки.
+  let lastFull = -1
+  layers.forEach((l, i) => FULLSCREEN.includes(l.type) && (lastFull = i))
+  const levelUp = level.index > data.seenLevel
+  const popup = !levelUp && queue.length ? ach.find((a) => a.id === queue[0]) : undefined
 
   return (
     <div className="app">
-      <main aria-hidden={lastCard >= 0}>
+      <main aria-hidden={lastFull >= 0}>
         {tab === 'home' && <Home />}
         {tab === 'cards' && <Cards />}
         {tab === 'expenses' && <Expenses />}
         {tab === 'levels' && <Levels />}
       </main>
       {layers.map((l, i) => {
-        if (l.type === 'card') return i === lastCard ? <CardDetail key={`${i}-card`} sourceId={l.sourceId} /> : null
+        if (FULLSCREEN.includes(l.type) && i !== lastFull) return null
         return <div key={`${i}-${l.type}`}>{renderLayer(l)}</div>
       })}
-      {lastCard < 0 && <BottomNav />}
-      {level.index > seenLevel && <LevelUp level={LEVELS[level.index]} onClose={() => useStore.getState().setSeenLevel(level.index)} />}
+      {lastFull < 0 && <BottomNav />}
+      {levelUp && <LevelUp level={LEVELS[level.index]} onClose={() => data.setSeenLevel(level.index)} />}
+      {popup && <AchievementPopup a={popup} more={queue.length - 1} onClose={() => setQueue((q) => q.slice(1))} />}
       <ConfirmHost />
       <Toast />
     </div>

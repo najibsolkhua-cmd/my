@@ -6,7 +6,7 @@ import { IncomeCard } from '../components/IncomeCard'
 import { Sheet } from '../components/Sheet'
 import { SOURCE_TYPES } from '../data/defaults'
 import { INCOME_ICONS } from '../data/icons'
-import { CARD_COLORS, PATTERN_COUNT, cardColor } from '../data/palette'
+import { CARD_COLORS, PATTERN_COUNT, PATTERN_NAMES, cardColor, swatchBackground } from '../data/palette'
 import { CardPattern } from '../components/CardPattern'
 import { plural } from '../lib/format'
 import { workStats } from '../lib/stats'
@@ -106,18 +106,18 @@ export function SourceForm({ edit, onSaved }: { edit?: Source; onSaved?: (id: st
           ))}
         </div>
       </Field>
-      <Field label="Цвет">
+      <Field label="Цвет" hint={cardColor(color).name}>
         <div className="swatches">
           {CARD_COLORS.map((cc) => (
-            <button key={cc.key} className={`swatch ${color === cc.key ? 'on' : ''}`} style={{ background: cc.bg }} onClick={() => setColor(cc.key)} aria-label={cc.key} />
+            <button key={cc.key} className={`swatch ${color === cc.key ? 'on' : ''}`} style={{ background: swatchBackground(cc) }} onClick={() => setColor(cc.key)} aria-label={cc.name} title={cc.name} />
           ))}
         </div>
       </Field>
-      <Field label="Узор">
+      <Field label="Узор" hint={PATTERN_NAMES[pattern % PATTERN_COUNT]}>
         <div className="patterns">
           {Array.from({ length: PATTERN_COUNT }, (_, i) => (
-            <button key={i} className={`pattern ${pattern === i ? 'on' : ''}`} style={{ background: c.bg }} onClick={() => setPattern(i)} aria-label={`Узор ${i + 1}`}>
-              <CardPattern pattern={i} color={c.accent} />
+            <button key={i} className={`pattern ${pattern === i ? 'on' : ''}`} style={{ background: c.bg }} onClick={() => setPattern(i)} aria-label={PATTERN_NAMES[i]} title={PATTERN_NAMES[i]}>
+              <CardPattern pattern={i} color={c.accent} bg={c.base} />
             </button>
           ))}
         </div>

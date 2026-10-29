@@ -126,25 +126,8 @@ p {
 }
 
 .logo-mark {
-  display: grid;
-  gap: 3px;
-}
-
-.logo-mark i {
-  display: block;
-  height: 4px;
-  border-radius: 2px;
-  background: var(--text);
-}
-
-.logo-mark i:nth-child(1) {
-  width: 16px;
-}
-.logo-mark i:nth-child(2) {
-  width: 22px;
-}
-.logo-mark i:nth-child(3) {
-  width: 28px;
+  flex-shrink: 0;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.35));
 }
 
 .top-actions {
@@ -955,6 +938,18 @@ p {
   font-variant-numeric: tabular-nums;
 }
 
+.show-more {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding-top: 12px;
+}
+
+.show-more .btn {
+  font-weight: 600;
+}
+
 /* ---------- график ---------- */
 
 .chart-tip {
@@ -1423,6 +1418,8 @@ p {
 }
 
 .ach {
+  --t1: #8a8f98;
+  --t2: #4b5058;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1432,38 +1429,97 @@ p {
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid var(--line);
-  opacity: 0.5;
+  min-width: 0;
+}
+
+.tier-bronze {
+  --t1: #e7a56b;
+  --t2: #8a4b22;
+}
+.tier-silver {
+  --t1: #f1f5f9;
+  --t2: #8796ad;
+}
+.tier-gold {
+  --t1: #fde047;
+  --t2: #d97706;
+}
+.tier-diamond {
+  --t1: #a5f3fc;
+  --t2: #6366f1;
+}
+
+.ach:not(.done) b,
+.ach:not(.done) .ach-icon {
+  opacity: 0.55;
 }
 
 .ach.done {
-  opacity: 1;
-  background: linear-gradient(180deg, rgba(253, 224, 71, 0.14), rgba(253, 224, 71, 0.02));
-  border-color: rgba(253, 224, 71, 0.35);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--t1) 16%, transparent), rgba(255, 255, 255, 0.02));
+  border-color: color-mix(in srgb, var(--t1) 45%, transparent);
 }
 
 .ach-icon {
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   display: grid;
   place-items: center;
   background: var(--panel-2);
   margin-bottom: 2px;
+  flex-shrink: 0;
 }
 
-.ach.done .ach-icon {
-  background: linear-gradient(135deg, #fde047, #d97706);
-  color: #3b2300;
+.ach.done .ach-icon,
+.ach-icon.big {
+  background: linear-gradient(135deg, var(--t1), var(--t2));
+  color: #1b1405;
+  box-shadow: 0 6px 16px -6px var(--t2);
+}
+
+.ach-icon.big {
+  width: 104px;
+  height: 104px;
+  margin: 6px 0;
+  animation: pop 0.6s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+.ach b,
+.ach small {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  hyphens: auto;
 }
 
 .ach b {
-  font-size: 13px;
+  font-size: 12.5px;
+  line-height: 1.2;
 }
 
 .ach small {
   font-size: 11px;
   color: var(--muted);
   line-height: 1.2;
+}
+
+.ach-progress {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: auto;
+  padding-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.ach-tier {
+  margin-top: auto;
+  padding-top: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--t1);
 }
 
 /* ---------- смена ---------- */
@@ -1829,9 +1885,9 @@ input[type='date'].input {
   border-radius: 14px;
   font-weight: 650;
   font-size: 14px;
-  opacity: 0.6;
-  transform: scale(0.96);
-  transition: opacity 0.15s, transform 0.15s, box-shadow 0.15s;
+  opacity: 0.55;
+  border: 2px solid transparent;
+  transition: opacity 0.15s, box-shadow 0.15s;
 }
 
 .pick-card span {
@@ -1842,30 +1898,30 @@ input[type='date'].input {
 
 .pick-card.on {
   opacity: 1;
-  transform: none;
-  box-shadow:
-    0 0 0 2px var(--bg),
-    0 0 0 4px var(--text);
+  border-color: var(--bg);
+  box-shadow: 0 0 0 2px var(--text);
 }
 
 .pick-card.add {
   background: var(--panel);
-  border: 1px dashed rgba(255, 255, 255, 0.25);
+  border: 2px dashed rgba(255, 255, 255, 0.25);
   opacity: 1;
   color: var(--muted);
 }
 
 .swatches {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(36px, 1fr));
   gap: 10px;
+  justify-items: center;
 }
 
 .swatch {
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   transition: transform 0.15s;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.15);
 }
 
 .swatch.on {
@@ -2022,6 +2078,99 @@ input[type='date'].input {
 
 /* ---------- настройки ---------- */
 
+.settings-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.settings-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #c9d8f0;
+  padding: 0 4px 2px;
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  cursor: pointer;
+}
+
+.toggle-row.disabled {
+  opacity: 0.5;
+}
+
+.toggle-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.toggle-text small {
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.toggle {
+  appearance: none;
+  -webkit-appearance: none;
+  flex-shrink: 0;
+  width: 51px;
+  height: 31px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.16);
+  position: relative;
+  cursor: pointer;
+  transition: background 0.2s;
+  margin: 0;
+}
+
+.toggle::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 27px;
+  height: 27px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.toggle:checked {
+  background: var(--plus);
+}
+
+.toggle:checked::after {
+  transform: translateX(20px);
+}
+
+.toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.time-input {
+  width: auto;
+  height: 40px;
+  color-scheme: dark;
+}
+
+.version {
+  font-size: 12px;
+}
+
 .menu {
   display: grid;
   gap: 6px;
@@ -2070,9 +2219,9 @@ input[type='date'].input {
 .toast {
   position: fixed;
   left: 50%;
-  bottom: calc(92px + var(--safe-b));
+  top: calc(12px + var(--safe-t));
   transform: translateX(-50%);
-  z-index: 60;
+  z-index: 90;
   padding: 12px 18px;
   border-radius: 99px;
   background: var(--text);
@@ -2090,7 +2239,7 @@ input[type='date'].input {
 @keyframes toastIn {
   from {
     opacity: 0;
-    transform: translate(-50%, 12px);
+    transform: translate(-50%, -12px);
   }
 }
 

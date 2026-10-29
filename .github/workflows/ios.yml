@@ -1,0 +1,76 @@
+name: Build iOS app
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ios
+  cancel-in-progress: true
+
+jobs:
+  ios:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+        env:
+          APP_VERSION: '1.1.${{ github.run_number }}'
+      - run: npx cap sync ios
+
+      # Сборка без подписи: IPA подписывается при установке (Sideloadly / AltStore)
+      # бесплатным Apple ID. Вместе с приложением собирается виджет Live Activity.
+      - name: Build
+        run: |
+          set -o pipefail
+          xcodebuild -version
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            MARKETING_VERSION=1.1 CURRENT_PROJECT_VERSION=${{ github.run_number }} \
+            archive > "$RUNNER_TEMP/xcode.log" 2>&1 || true
+          grep -E "\*\* ARCHIVE" "$RUNNER_TEMP/xcode.log" || true
+          test -d "$RUNNER_TEMP/App.xcarchive/Products/Applications/App.app"
+          test -d "$RUNNER_TEMP/App.xcarchive/Products/Applications/App.app/PlugIns/ShiftWidget.appex"
+
+      # Ошибки сборки — в аннотации запуска, чтобы их было видно без скачивания логов.
+      - name: Report build errors
+        if: failure()
+        run: |
+          grep -E "error:|fatal" "$RUNNER_TEMP/xcode.log" | sort -u | head -40 | while IFS= read -r l; do echo "::error::$l"; done
+          tail -25 "$RUNNER_TEMP/xcode.log" | while IFS= read -r l; do echo "::warning::$l"; done
+
+      - name: Package IPA
+        run: |
+          mkdir -p Payload
+          cp -R "$RUNNER_TEMP/App.xcarchive/Products/Applications/App.app" Payload/
+          zip -qry Kapital.ipa Payload
+          ls -la Kapital.ipa
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Kapital-ipa
+          path: Kapital.ipa
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete ios --yes --cleanup-tag || true
+          gh release create ios Kapital.ipa \
+            --target "$GITHUB_SHA" \
+            --latest=false \
+            --title "Капитал для iPhone (сборка ${{ github.run_number }})" \
+            --notes "Установи Kapital.ipa через Sideloadly или AltStore со своим Apple ID. Новая версия ставится поверх — данные сохраняются."
