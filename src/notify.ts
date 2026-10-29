@@ -1,4 +1,5 @@
 import { registerPlugin } from '@capacitor/core'
+import { LocalNotifications } from '@capacitor/local-notifications'
 import { cardColor } from './data/palette'
 import { IDS, MANAGED, planNotifications } from './lib/notifyPlan'
 import { isNative, platform } from './platform'
@@ -22,9 +23,9 @@ const SF_SYMBOLS: Record<string, string> = {
   Gem: 'diamond.fill', Sparkles: 'sparkles',
 }
 
-async function plugin() {
-  return (await import('@capacitor/local-notifications')).LocalNotifications
-}
+// Плагин нельзя возвращать из async-функции: прокси Capacitor притворяется промисом
+// (у него есть «then»), и вызов падает. Поэтому — прямая ссылка.
+const plugin = () => LocalNotifications
 
 /** Включены ли Live Activity для приложения в настройках iPhone. */
 export async function liveActivityAvailable(): Promise<boolean> {
@@ -39,7 +40,7 @@ export async function liveActivityAvailable(): Promise<boolean> {
 /** Спрашивает разрешение на уведомления. true — разрешено. */
 export async function requestNotifications(): Promise<boolean> {
   if (!isNative) return false
-  const ln = await plugin()
+  const ln = plugin()
   const current = await ln.checkPermissions()
   if (current.display === 'granted') return true
   const res = await ln.requestPermissions()
@@ -49,7 +50,7 @@ export async function requestNotifications(): Promise<boolean> {
 let channelsReady = false
 async function ensureChannels() {
   if (platform !== 'android' || channelsReady) return
-  const ln = await plugin()
+  const ln = plugin()
   await ln.createChannel({ id: 'reminders', name: 'Напоминания', description: 'Напоминания и итоги недели', importance: 4 })
   await ln.createChannel({ id: 'shift', name: 'Идущая смена', description: 'Таймер смены в шторке', importance: 2, vibration: false })
   channelsReady = true
@@ -57,7 +58,7 @@ async function ensureChannels() {
 
 /** Приводит расписание уведомлений в соответствие с данными. */
 async function syncScheduled(d: AppData) {
-  const ln = await plugin()
+  const ln = plugin()
   const pending = await ln.getPending()
   const ours = pending.notifications.filter((n) => MANAGED(n.id))
   if (ours.length) await ln.cancel({ notifications: ours.map((n) => ({ id: n.id })) })
@@ -97,7 +98,7 @@ async function syncShift(d: AppData) {
   }
 
   if (platform === 'android') {
-    const ln = await plugin()
+    const ln = plugin()
     await ln.removeDeliveredNotificationsById({ ids: [IDS.ongoing] }).catch(() => {})
     if (!show || !source) return
     if ((await ln.checkPermissions()).display !== 'granted') return

@@ -63,7 +63,13 @@ export function Settings() {
       setSettings({ notifications: false })
       return
     }
-    if (await requestNotifications()) {
+    let granted = false
+    try {
+      granted = await requestNotifications()
+    } catch {
+      granted = false
+    }
+    if (granted) {
       setSettings({ notifications: true })
       showToast('Уведомления включены')
     } else {
@@ -77,7 +83,7 @@ export function Settings() {
   }
 
   const toggleLive = async (on: boolean) => {
-    if (on && platform === 'android' && !(await requestNotifications())) {
+    if (on && platform === 'android' && !(await requestNotifications().catch(() => false))) {
       showToast('Разреши уведомления, чтобы видеть таймер в шторке')
       return
     }
