@@ -1,5 +1,6 @@
 import { ChevronLeft, Pencil, Play, Plus, Square } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
+import { useSwipeDismiss } from '../components/useSwipeDismiss'
 import { BarChart } from '../components/BarChart'
 import { IncomeCard } from '../components/IncomeCard'
 import { PeriodBar } from '../components/PeriodBar'
@@ -21,6 +22,8 @@ export function CardDetail({ sourceId }: { sourceId: string }) {
   const now = useNow(shift?.sourceId === sourceId ? 1000 : 60_000)
   const [period, setPeriod] = useState<Period>({ kind: 'month', offset: 0 })
   const [mode, setMode] = useState<'money' | 'hours'>('money')
+  const ref = useRef<HTMLDivElement>(null)
+  useSwipeDismiss(ref, { axis: 'x', onDismiss: close })
 
   const incomes = useMemo(() => allIncomes.filter((x) => x.sourceId === sourceId), [allIncomes, sourceId])
   const range = periodRange(period, today, earliestDate(incomes))
@@ -51,7 +54,7 @@ export function CardDetail({ sourceId }: { sourceId: string }) {
   })
 
   return (
-    <div className="detail" style={{ ['--card' as string]: c.base }}>
+    <div className="detail" ref={ref} style={{ ['--card' as string]: c.base }}>
       <header className="top detail-top">
         <button className="icon-btn" onClick={close} aria-label="Назад">
           <ChevronLeft size={22} />

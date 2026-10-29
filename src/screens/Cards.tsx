@@ -52,7 +52,6 @@ export function Cards() {
         <>
           <PeriodBar value={period} onChange={setPeriod} label={range.label} />
           <CardStack sources={active} stats={stats} />
-          <p className="hint">Нажми на карту, чтобы раскрыть её, и ещё раз — чтобы открыть историю</p>
 
           <section className="panel">
             <div className="panel-head">

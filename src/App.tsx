@@ -1,16 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { BottomNav } from './components/BottomNav'
+import { Pager } from './components/Pager'
 import { AchievementPopup, ConfirmHost, LevelUp, Toast } from './components/Overlays'
 import { useToday } from './hooks'
 import { achievements } from './lib/achievements'
 import { LEVELS, levelFor } from './lib/levels'
 import { last7 } from './lib/stats'
 import { CardDetail } from './screens/CardDetail'
-import { Cards } from './screens/Cards'
-import { Expenses } from './screens/Expenses'
 import { History } from './screens/History'
-import { Home } from './screens/Home'
-import { Levels } from './screens/Levels'
 import { AddMenu } from './sheets/AddMenu'
 import { CategoryForm } from './sheets/CategoryForm'
 import { ExpenseForm } from './sheets/ExpenseForm'
@@ -66,7 +63,6 @@ export function App() {
 }
 
 function Main() {
-  const tab = useUI((s) => s.tab)
   const layers = useUI((s) => s.layers)
   const data = useStore()
   const now = useToday()
@@ -100,12 +96,6 @@ function Main() {
     }
   }, [ach])
 
-  // Блокируем прокрутку фона, пока открыта шторка.
-  const sheetOpen = layers.some((l) => !FULLSCREEN.includes(l.type))
-  useEffect(() => {
-    document.body.classList.toggle('locked', sheetOpen)
-  }, [sheetOpen])
-
   // Полноэкранный слой (карта, история) — поверх него могут быть шторки.
   let lastFull = -1
   layers.forEach((l, i) => FULLSCREEN.includes(l.type) && (lastFull = i))
@@ -114,11 +104,9 @@ function Main() {
 
   return (
     <div className="app">
+      <div className="app-bg" aria-hidden />
       <main aria-hidden={lastFull >= 0}>
-        {tab === 'home' && <Home />}
-        {tab === 'cards' && <Cards />}
-        {tab === 'expenses' && <Expenses />}
-        {tab === 'levels' && <Levels />}
+        <Pager />
       </main>
       {layers.map((l, i) => {
         if (FULLSCREEN.includes(l.type) && i !== lastFull) return null

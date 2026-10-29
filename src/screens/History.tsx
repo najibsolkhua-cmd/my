@@ -1,5 +1,6 @@
 import { ArrowDownRight, ArrowUpRight, ChevronLeft } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
+import { useSwipeDismiss } from '../components/useSwipeDismiss'
 import { Icon } from '../components/Icon'
 import { OpRow } from '../components/OpRow'
 import { PeriodBar } from '../components/PeriodBar'
@@ -24,6 +25,8 @@ export function History() {
   const now = useToday()
   const [kind, setKind] = useState<Kind>('all')
   const [period, setPeriod] = useState<Period>({ kind: 'month', offset: 0 })
+  const ref = useRef<HTMLDivElement>(null)
+  useSwipeDismiss(ref, { axis: 'x', onDismiss: close })
 
   const range = periodRange(period, now, earliestDate(incomes, expenses))
   const inc = useMemo(() => filterRange(incomes, range), [incomes, range.start, range.end])
@@ -39,7 +42,7 @@ export function History() {
   const { visible, more } = usePaged(groups, 10, `${kind}-${period.kind}-${period.offset}`)
 
   return (
-    <div className="detail">
+    <div className="detail" ref={ref}>
       <header className="top detail-top">
         <button className="icon-btn" onClick={close} aria-label="Назад">
           <ChevronLeft size={22} />

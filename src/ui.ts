@@ -2,6 +2,17 @@ import { create } from 'zustand'
 import type { Category, Expense, Goal, Income, Source } from './types'
 
 export type Tab = 'home' | 'cards' | 'expenses' | 'levels'
+export const TABS: Tab[] = ['home', 'cards', 'expenses', 'levels']
+
+// Вкладка переживает «потяни, чтобы обновить» (перезагрузку страницы).
+function savedTab(): Tab {
+  try {
+    const t = sessionStorage.getItem('kapital-tab') as Tab | null
+    return t && TABS.includes(t) ? t : 'home'
+  } catch {
+    return 'home'
+  }
+}
 
 export type Layer =
   | { type: 'add' }
@@ -44,13 +55,17 @@ interface UI {
 // Слои (шторки и экраны) связаны с историей браузера, чтобы кнопка
 // «назад» на Android и свайп назад закрывали шторку, а не приложение.
 export const useUI = create<UI>()((set, get) => ({
-  tab: 'home',
+  tab: savedTab(),
   layers: [],
   toast: null,
   confirm: null,
   setTab: (tab) => {
     set({ tab })
-    window.scrollTo({ top: 0 })
+    try {
+      sessionStorage.setItem('kapital-tab', tab)
+    } catch {
+      /* ignore */
+    }
   },
   open: (l) => {
     const depth = get().layers.length + 1

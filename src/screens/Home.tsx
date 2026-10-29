@@ -170,7 +170,7 @@ export function Home() {
                   Все
                 </button>
               </div>
-              <div className="mini-cards">
+              <div className="mini-cards" data-noswipe>
                 {activeSources.map((s) => {
                   const st = workStats(inc.filter((x) => x.sourceId === s.id))
                   return <IncomeCard key={s.id} source={s} total={st.total} minutes={st.minutes} rate={st.rate} live={shift?.sourceId === s.id} className="mini" onClick={() => open({ type: 'card', sourceId: s.id })} />

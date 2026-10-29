@@ -8,6 +8,12 @@ const config: CapacitorConfig = {
   android: {
     backgroundColor: '#071430',
   },
+  ios: {
+    backgroundColor: '#071430',
+    // окно приложения не пружинит и не прокручивается целиком — прокручиваются только экраны
+    scrollEnabled: false,
+    contentInset: 'never',
+  },
   plugins: {
     SystemBars: {
       insetsHandling: 'css',
