@@ -1,0 +1,88 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    env:
+      HAS_KEY: ${{ secrets.SIGNING_SEED != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - run: npx cap sync android
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # Ключ подписи не хранится нигде: он каждый раз выводится из секрета SIGNING_SEED,
+      # поэтому у всех сборок одна подпись и обновления ставятся поверх.
+      # Без секрета APK всё равно собирается (для проверки), но не публикуется.
+      - name: Derive signing key
+        if: env.HAS_KEY == 'true'
+        env:
+          SIGNING_SEED: ${{ secrets.SIGNING_SEED }}
+        run: |
+          pip install --quiet cryptography
+          PASS=$(openssl rand -hex 24)
+          echo "::add-mask::$PASS"
+          python3 scripts/derive-keystore.py "$RUNNER_TEMP/kapital.p12" "$PASS"
+          echo "KEYSTORE_PATH=$RUNNER_TEMP/kapital.p12" >> "$GITHUB_ENV"
+          echo "KEYSTORE_PASSWORD=$PASS" >> "$GITHUB_ENV"
+          echo "KEY_PASSWORD=$PASS" >> "$GITHUB_ENV"
+          echo "KEY_ALIAS=kapital" >> "$GITHUB_ENV"
+
+      - name: Build APK
+        working-directory: android
+        env:
+          VERSION_CODE: ${{ github.run_number }}
+        run: |
+          ./gradlew assembleRelease --no-daemon
+          cp app/build/outputs/apk/release/app-release.apk "$GITHUB_WORKSPACE/Kapital.apk"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Kapital-apk
+          path: Kapital.apk
+
+      - name: Publish release
+        if: env.HAS_KEY == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete apk --yes --cleanup-tag || true
+          gh release create apk Kapital.apk \
+            --target "$GITHUB_SHA" \
+            --title "Капитал для Android (сборка ${{ github.run_number }})" \
+            --notes "Скачай Kapital.apk на телефон и открой его. Новая версия ставится поверх старой — данные сохраняются." \
+            --latest
+
+      - name: Signing seed missing
+        if: env.HAS_KEY != 'true'
+        run: echo "::warning::Секрет SIGNING_SEED не задан — APK собран, но не опубликован в Releases."

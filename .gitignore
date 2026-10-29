@@ -3,3 +3,9 @@ dist
 dist-single
 *.log
 .DS_Store
+
+# ключи подписи никогда не коммитим
+*.jks
+*.p12
+*.keystore
+*.tsbuildinfo

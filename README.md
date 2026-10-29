@@ -33,6 +33,14 @@
 - **iPhone:** открыть ссылку в Safari → «Поделиться» → «На экран Домой».
 - **Android:** открыть в Chrome → меню ⋮ → «Добавить на главный экран».
 
+## Android-приложение (APK)
+
+APK собирается автоматически при каждом изменении в `main` и выкладывается в [Releases](https://github.com/najibsolkhua-cmd/my/releases/latest).
+
+**Скачать:** https://github.com/najibsolkhua-cmd/my/releases/latest/download/Kapital.apk
+
+Подпись APK вычисляется из секрета `SIGNING_SEED` (Settings → Secrets and variables → Actions). Пока фраза та же, новая версия ставится поверх старой и данные сохраняются. Если фразу потерять или поменять, придётся удалить приложение и поставить заново, поэтому перед этим сохрани резервную копию.
+
 ## Разработка
 
 ```bash
@@ -40,6 +48,7 @@ npm install
 npm run dev      # локальный сервер
 npm test         # тесты логики
 npm run build    # сборка в dist/
+npx cap sync android   # скопировать сборку в Android-проект (нужен Android Studio)
 ```
 
 React 19 + TypeScript + Vite, состояние в zustand с сохранением в localStorage. При пуше в `main` GitHub Actions прогоняет тесты и публикует приложение на GitHub Pages.

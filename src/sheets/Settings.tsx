@@ -3,6 +3,7 @@ import { useRef } from 'react'
 import { Sheet } from '../components/Sheet'
 import { demoData } from '../data/demo'
 import { today } from '../lib/dates'
+import { isNative, saveTextFile } from '../native'
 import { snapshot, useStore, validateBackup } from '../store'
 import { useUI } from '../ui'
 
@@ -11,17 +12,14 @@ export function Settings() {
   const { showToast, ask, close } = useUI.getState()
   const hasData = useStore((s) => s.sources.length + s.incomes.length + s.expenses.length > 0)
 
-  const exportData = () => {
-    const blob = new Blob([JSON.stringify({ app: 'kapital', version: 1, exportedAt: new Date().toISOString(), data: snapshot() }, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `kapital-${today()}.json`
-    document.body.appendChild(a)
-    a.click()
-    a.remove()
-    setTimeout(() => URL.revokeObjectURL(url), 1000)
-    showToast('Копия сохранена')
+  const exportData = async () => {
+    const json = JSON.stringify({ app: 'kapital', version: 1, exportedAt: new Date().toISOString(), data: snapshot() }, null, 2)
+    try {
+      await saveTextFile(`kapital-${today()}.json`, json, 'application/json')
+      if (!isNative) showToast('Копия сохранена')
+    } catch {
+      // пользователь закрыл меню «Поделиться» — это не ошибка
+    }
   }
 
   const importData = async (file: File) => {
@@ -66,7 +64,7 @@ export function Settings() {
           <Download size={20} />
           <span>
             <b>Сохранить резервную копию</b>
-            <small>файл .json — на случай смены телефона</small>
+            <small>{isNative ? 'отправить файл в Telegram, на Диск или в почту' : 'файл .json — на случай смены телефона'}</small>
           </span>
         </button>
         <button className="menu-item" onClick={() => fileRef.current?.click()}>
@@ -105,7 +103,13 @@ export function Settings() {
       <div className="note">
         <Smartphone size={18} />
         <p>
-          <b>Установить на телефон.</b> iPhone: Safari → «Поделиться» → «На экран Домой». Android: Chrome → меню ⋮ → «Добавить на главный экран». Данные хранятся только на этом устройстве.
+          {isNative ? (
+            <>Данные хранятся только на этом телефоне. Время от времени сохраняй резервную копию — например, в Telegram «Избранное» или на Google Диск.</>
+          ) : (
+            <>
+              <b>Установить на телефон.</b> iPhone: Safari → «Поделиться» → «На экран Домой». Android: Chrome → меню ⋮ → «Добавить на главный экран». Данные хранятся только на этом устройстве.
+            </>
+          )}
         </p>
       </div>
     </Sheet>
