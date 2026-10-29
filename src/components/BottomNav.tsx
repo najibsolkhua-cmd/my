@@ -1,6 +1,6 @@
 import { Home, Layers, Plus, Trophy, Wallet } from 'lucide-react'
 import { useRef, useState } from 'react'
-import { getPos, setDragging, setPos, TABS_COUNT, usePosIndex } from '../pagerPos'
+import { bindLens, getPos, setDragging, setPos, TABS_COUNT, usePosIndex } from '../pagerPos'
 import { TABS, useUI } from '../ui'
 
 const ITEMS = [
@@ -22,6 +22,13 @@ export function BottomNav() {
     const r = navRef.current!.getBoundingClientRect()
     const w = (r.width - PAD * 2) / TABS_COUNT
     return Math.max(0, Math.min(TABS_COUNT - 1, (clientX - r.left - PAD - w / 2) / w))
+  }
+
+  const reset = () => {
+    drag.current = null
+    setPressing(false)
+    setDragging(false)
+    setPos(TABS.indexOf(useUI.getState().tab))
   }
 
   const select = (i: number) => {
@@ -56,19 +63,16 @@ export function BottomNav() {
         onPointerUp={(e) => {
           const d = drag.current
           drag.current = null
+          navRef.current?.releasePointerCapture?.(e.pointerId)
           setPressing(false)
           setDragging(false)
           if (!d) return
           select(Math.round(d.moved ? getPos() : posAt(e.clientX)))
         }}
-        onPointerCancel={() => {
-          drag.current = null
-          setPressing(false)
-          setDragging(false)
-          setPos(TABS.indexOf(useUI.getState().tab))
-        }}
+        onPointerCancel={reset}
+        onLostPointerCapture={() => drag.current && reset()}
       >
-        <span className="nav-lens" aria-hidden />
+        <span className="nav-lens" ref={bindLens} aria-hidden />
         {ITEMS.map((it, i) => (
           <button
             key={it.label}

@@ -1,12 +1,13 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { setDragging, setPos, TABS_COUNT } from '../pagerPos'
+import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { bindTrack, setDragging, setPos, TABS_COUNT } from '../pagerPos'
 import { Cards } from '../screens/Cards'
 import { Expenses } from '../screens/Expenses'
 import { Home } from '../screens/Home'
 import { Levels } from '../screens/Levels'
 import { TABS, useUI, type Tab } from '../ui'
 
-const SCREENS: Record<Tab, () => React.JSX.Element> = { home: Home, cards: Cards, expenses: Expenses, levels: Levels }
+// memo: при смене вкладки экраны не перерисовываются заново — анимация не дёргается.
+const SCREENS: Record<Tab, React.MemoExoticComponent<() => React.JSX.Element>> = { home: memo(Home), cards: memo(Cards), expenses: memo(Expenses), levels: memo(Levels) }
 const PULL_MAX = 120
 const PULL_TRIGGER = 72
 
@@ -25,7 +26,7 @@ export function Pager() {
 
   useLayoutEffect(() => {
     indexRef.current = index
-    setPos(index)
+    setPos(index, true)
   }, [index])
 
   useEffect(() => {
@@ -89,7 +90,7 @@ export function Pager() {
         if (g.dx > width() * 0.2 || v > 0.35) next--
         next = Math.max(0, Math.min(TABS_COUNT - 1, next))
         if (next !== indexRef.current) useUI.getState().setTab(TABS[next])
-        else setPos(indexRef.current)
+        else setPos(indexRef.current, true)
       } else if (g.mode === 'pull') {
         const c = content(g.page)
         const d = Math.min(PULL_MAX, Math.max(0, g.dy) * 0.5)
@@ -129,7 +130,7 @@ export function Pager() {
           <circle cx="18" cy="18" r="13" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeDasharray={`${(refreshing ? 0.7 : progress * 0.85) * 81.7} 81.7`} />
         </svg>
       </div>
-      <div className="track">
+      <div className="track" ref={bindTrack}>
         {TABS.map((t, i) => {
           const Screen = SCREENS[t]
           return (

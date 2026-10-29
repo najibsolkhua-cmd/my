@@ -1,19 +1,42 @@
 import { useEffect, useState } from 'react'
 
 // Позиция перелистывания вкладок: 0 — «Главная», 3 — «Уровни», дробные значения — во время свайпа.
-// Хранится в CSS-переменной --pos: по ней едут и страницы, и «линза» в нижней панели.
+// Двигаем напрямую ленту страниц и линзу в панели — без пересчёта стилей всего приложения,
+// и не чаще одного раза за кадр.
 export const TABS_COUNT = 4
 let pos = 0
+let frame = 0
 const listeners = new Set<(p: number) => void>()
+const targets = { track: null as HTMLElement | null, lens: null as HTMLElement | null }
 
-export function setPos(p: number) {
+function apply() {
+  frame = 0
+  if (targets.track) targets.track.style.transform = `translate3d(${(-pos * 100) / TABS_COUNT}%, 0, 0)`
+  if (targets.lens) targets.lens.style.translate = `${pos * 100}% 0`
+  listeners.forEach((l) => l(pos))
+}
+
+/** immediate — применить сразу (смена вкладки), иначе — в ближайшем кадре (во время свайпа). */
+export function setPos(p: number, immediate = false) {
   pos = p
-  document.documentElement.style.setProperty('--pos', p.toFixed(4))
-  listeners.forEach((l) => l(p))
+  if (immediate) {
+    if (frame) cancelAnimationFrame(frame)
+    apply()
+  } else if (!frame) frame = requestAnimationFrame(apply)
 }
 
 export function getPos() {
   return pos
+}
+
+export function bindTrack(el: HTMLElement | null) {
+  targets.track = el
+  if (el) apply()
+}
+
+export function bindLens(el: HTMLElement | null) {
+  targets.lens = el
+  if (el) apply()
 }
 
 /** Пока палец ведёт — без анимации, страница точно под пальцем. */
