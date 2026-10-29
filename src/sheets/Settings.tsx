@@ -21,7 +21,7 @@ export function Settings() {
   }, [])
 
   const exportData = async () => {
-    const json = JSON.stringify({ app: 'kapital', version: 2, exportedAt: new Date().toISOString(), data: snapshot() }, null, 2)
+    const json = JSON.stringify({ app: 'kapital', version: 3, exportedAt: new Date().toISOString(), data: snapshot() }, null, 2)
     try {
       if (await saveTextFile(`kapital-${today()}.json`, json, 'application/json')) showToast('Копия готова')
     } catch {

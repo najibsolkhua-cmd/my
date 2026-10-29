@@ -15,6 +15,11 @@ const config: CapacitorConfig = {
     contentInset: 'never',
   },
   plugins: {
+    // клавиатура не сжимает приложение — шторка сама поднимается над ней
+    Keyboard: {
+      resize: 'none',
+      resizeOnFullScreen: false,
+    },
     SystemBars: {
       insetsHandling: 'css',
       style: 'DARK',

@@ -4,6 +4,7 @@ import { DEFAULT_CATEGORIES } from './data/defaults'
 import { round2 } from './lib/format'
 import { uid } from './lib/ids'
 import { isNative } from './platform'
+import { OLD_TO_NEW_LEVEL } from './lib/levels'
 import type { Category, Expense, Goal, Income, Settings, Shift, Source } from './types'
 
 export interface AppData {
@@ -20,9 +21,19 @@ export interface AppData {
   /** полученные награды; null — ещё не считали (после обновления приложения) */
   earned: string[] | null
   /** счётчики для наград */
-  counters: { shifts: number; longestShift: number }
+  counters: Counters
   settings: Settings
 }
+
+export interface Counters {
+  shifts: number
+  longestShift: number
+  /** смены, начатые ночью (22:00–04:59) и рано утром (05:00–06:59) */
+  nightShifts: number
+  earlyShifts: number
+}
+
+export const EMPTY_COUNTERS: Counters = { shifts: 0, longestShift: 0, nightShifts: 0, earlyShifts: 0 }
 
 export const DEFAULT_SETTINGS: Settings = {
   notifications: false,
@@ -98,11 +109,29 @@ export const initialData = (): AppData => ({
   seenLevel: 0,
   bestLevel: 0,
   earned: null,
-  counters: { shifts: 0, longestShift: 0 },
+  counters: { ...EMPTY_COUNTERS },
   settings: { ...DEFAULT_SETTINGS },
 })
 
 const clean = (n: number) => round2(Math.max(0, n))
+
+/** Перенос сохранённых данных старых версий приложения. */
+export function migrateData(persisted: unknown, version: number): AppData {
+  const st = (persisted ?? {}) as Partial<AppData>
+  if (version < 2) {
+    st.earned = null
+    st.counters = { ...EMPTY_COUNTERS }
+  }
+  if (version < 3) {
+    // лестница выросла с 10 до 15 ступеней — переносим сохранённые номера уровней
+    const map = (n?: number) => OLD_TO_NEW_LEVEL[Math.max(0, Math.min(9, n ?? 0))]
+    st.seenLevel = map(st.seenLevel)
+    st.bestLevel = map(st.bestLevel)
+    st.counters = { ...EMPTY_COUNTERS, ...(st.counters ?? {}) }
+  }
+  st.settings = { ...DEFAULT_SETTINGS, ...(st.settings ?? {}) }
+  return st as AppData
+}
 
 export const useStore = create<AppData & Actions>()(
   persist(
@@ -155,7 +184,17 @@ export const useStore = create<AppData & Actions>()(
         const { shift, counters } = get()
         if (!shift) return null
         const minutes = Math.max(1, Math.round((Date.now() - shift.startedAt) / 60000))
-        set({ shift: null, counters: { shifts: counters.shifts + 1, longestShift: Math.max(counters.longestShift, minutes) } })
+        const hour = new Date(shift.startedAt).getHours()
+        set({
+          shift: null,
+          counters: {
+            ...counters,
+            shifts: counters.shifts + 1,
+            longestShift: Math.max(counters.longestShift, minutes),
+            nightShifts: counters.nightShifts + (hour >= 22 || hour < 5 ? 1 : 0),
+            earlyShifts: counters.earlyShifts + (hour >= 5 && hour < 7 ? 1 : 0),
+          },
+        })
         return { sourceId: shift.sourceId, minutes }
       },
       cancelShift: () => set({ shift: null }),
@@ -169,17 +208,9 @@ export const useStore = create<AppData & Actions>()(
     }),
     {
       name: 'kapital-data',
-      version: 2,
+      version: 3,
       storage: createJSONStorage(() => (isNative ? nativeStorage : localStorage)),
-      migrate: (persisted, version) => {
-        const st = (persisted ?? {}) as Partial<AppData>
-        if (version < 2) {
-          st.earned = null
-          st.counters = { shifts: 0, longestShift: 0 }
-        }
-        st.settings = { ...DEFAULT_SETTINGS, ...(st.settings ?? {}) }
-        return st as AppData
-      },
+      migrate: migrateData,
       partialize: (st): AppData => ({
         sources: st.sources,
         incomes: st.incomes,
@@ -213,6 +244,9 @@ const isDate = (v: unknown): v is string => isStr(v) && /^\d{4}-\d{2}-\d{2}$/.te
 export function validateBackup(raw: unknown): AppData | string {
   if (!raw || typeof raw !== 'object') return 'Файл не похож на резервную копию'
   const r = (raw as { data?: unknown }).data ?? raw
+  // копии до версии 3 хранят номера уровней по старой лестнице из 10 ступеней
+  const fileVersion = Number((raw as { version?: unknown }).version ?? 1)
+  const level = (n: unknown) => (isNum(n) ? (fileVersion < 3 ? OLD_TO_NEW_LEVEL[Math.max(0, Math.min(9, n))] : n) : 0)
   const d = r as Partial<AppData>
   if (!isArr(d.sources) || !isArr(d.incomes) || !isArr(d.expenses) || !isArr(d.categories)) return 'В файле нет нужных разделов'
   for (const s of d.sources) if (!isStr(s?.id) || !isStr(s?.name)) return 'Повреждены карты'
@@ -229,10 +263,10 @@ export function validateBackup(raw: unknown): AppData | string {
     expenses: d.expenses.map((x) => ({ ...x, createdAt: isNum(x.createdAt) ? x.createdAt : 0 })),
     goals: isArr(d.goals) ? d.goals : [],
     shift: null,
-    seenLevel: isNum(d.seenLevel) ? d.seenLevel : 0,
-    bestLevel: isNum(d.bestLevel) ? d.bestLevel : 0,
+    seenLevel: level(d.seenLevel),
+    bestLevel: level(d.bestLevel),
     earned: isArr(d.earned) ? d.earned.filter(isStr) : null,
-    counters: d.counters && isNum(d.counters.shifts) && isNum(d.counters.longestShift) ? d.counters : { shifts: 0, longestShift: 0 },
+    counters: d.counters && isNum(d.counters.shifts) && isNum(d.counters.longestShift) ? { ...EMPTY_COUNTERS, ...d.counters } : { ...EMPTY_COUNTERS },
     settings: { ...DEFAULT_SETTINGS },
   }
 }

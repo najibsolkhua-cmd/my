@@ -1,5 +1,5 @@
 import { Lock } from 'lucide-react'
-import type { Level } from '../lib/levels'
+import { MAX_LEVEL, type Level } from '../lib/levels'
 import { Icon } from './Icon'
 
 const V = [
@@ -23,7 +23,7 @@ const DOTS = Array.from({ length: 12 }, (_, i) => {
 /** Шестиугольный «огранённый» значок уровня. */
 export function LevelBadge({ level, size = 56, locked = false, glow = false }: { level: Level; size?: number; locked?: boolean; glow?: boolean }) {
   const id = `lg${level.index}`
-  const lit = Math.min(12, Math.round((level.index / 9) * 12))
+  const lit = Math.min(12, Math.round((level.index / MAX_LEVEL) * 12))
   const num = Math.round(Math.max(18, size * 0.3))
   return (
     <div className={`badge ${locked ? 'badge-locked' : ''} ${glow ? 'badge-glow' : ''}`} style={{ width: size, height: size, ['--glow' as string]: level.from }}>
@@ -54,7 +54,7 @@ export function LevelBadge({ level, size = 56, locked = false, glow = false }: {
       </svg>
       <div className="badge-icon">{locked ? <Lock size={size * 0.3} /> : <Icon name={level.icon} size={size * 0.36} strokeWidth={2.2} />}</div>
       {size >= 48 && (
-        <div className="badge-num" style={{ width: num, height: num, fontSize: Math.round(num * 0.56) }}>
+        <div className="badge-num" style={{ width: num, height: num, fontSize: Math.round(num * (level.index > 9 ? 0.46 : 0.56)) }}>
           {level.index}
         </div>
       )}

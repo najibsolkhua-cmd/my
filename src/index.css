@@ -32,6 +32,7 @@ body {
   height: 100%;
   overflow: hidden;
   overscroll-behavior: none;
+  background: #071430;
 }
 
 body {
@@ -57,7 +58,7 @@ textarea {
 }
 
 .app-bg {
-  position: fixed;
+  position: absolute;
   inset: 0;
   pointer-events: none;
   background:
@@ -113,9 +114,15 @@ p {
   color: var(--plus);
 }
 
+/* Всё приложение — один фиксированный слой на всю высоту экрана;
+   панели, шторки и окна позиционируются внутри него. */
 .app {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--app-h, 100%);
+  overflow: hidden;
 }
 
 .pager {
@@ -932,7 +939,7 @@ p {
 /* ---------- экран карты ---------- */
 
 .detail {
-  position: fixed;
+  position: absolute;
   inset: 0;
   z-index: 20;
   overflow-x: hidden;
@@ -1512,6 +1519,34 @@ p {
   border-radius: 16px;
 }
 
+.ach-filter {
+  margin: 14px 0 4px;
+}
+
+.ach-filter button {
+  flex: 1;
+}
+
+.ach-group {
+  margin-top: 16px;
+}
+
+.ach-group-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #c9d8f0;
+  margin-bottom: 8px;
+}
+
+.ach.secret {
+  border-style: dashed;
+}
+
 .ach-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -1589,6 +1624,9 @@ p {
 .ach small {
   max-width: 100%;
   overflow-wrap: anywhere;
+}
+
+.ach b {
   hyphens: auto;
 }
 
@@ -1689,7 +1727,7 @@ p {
 }
 
 .nav-wrap {
-  position: fixed;
+  position: absolute;
   left: 0;
   right: 0;
   bottom: 0;
@@ -1805,8 +1843,10 @@ p {
 /* ---------- шторка ---------- */
 
 .sheet-wrap {
-  position: fixed;
+  position: absolute;
   inset: 0;
+  bottom: var(--kb, 0px);
+  transition: bottom 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
   z-index: 40;
   display: flex;
   align-items: flex-end;
@@ -1816,6 +1856,7 @@ p {
 .sheet-backdrop {
   position: absolute;
   inset: 0;
+  bottom: calc(-1 * var(--kb, 0px));
   background: rgba(2, 8, 20, 0.6);
   animation: fadeIn 0.2s ease-out;
 }
@@ -1824,7 +1865,7 @@ p {
   position: relative;
   width: 100%;
   max-width: 480px;
-  max-height: calc(100dvh - var(--safe-t) - 24px);
+  max-height: calc(100% - var(--safe-t) - 12px);
   display: flex;
   flex-direction: column;
   background: #0d1f42;
@@ -1868,6 +1909,16 @@ p {
   gap: 10px;
   padding: 12px 20px calc(14px + var(--safe-b));
   border-top: 1px solid var(--line);
+}
+
+/* над клавиатурой нижний отступ под «полоску» iPhone не нужен */
+.kb-open .sheet-foot {
+  padding-bottom: 12px;
+}
+
+.kb-open .sheet {
+  border-radius: 28px;
+  margin-bottom: 6px;
 }
 
 @keyframes sheetUp {
@@ -2389,7 +2440,7 @@ input[type='date'].input {
 /* ---------- всплывающие ---------- */
 
 .toast {
-  position: fixed;
+  position: absolute;
   left: 50%;
   top: calc(12px + var(--safe-t));
   transform: translateX(-50%);
@@ -2416,7 +2467,7 @@ input[type='date'].input {
 }
 
 .confirm-wrap {
-  position: fixed;
+  position: absolute;
   inset: 0;
   z-index: 70;
   display: grid;
@@ -2463,7 +2514,7 @@ input[type='date'].input {
 }
 
 .levelup {
-  position: fixed;
+  position: absolute;
   inset: 0;
   z-index: 80;
   display: grid;

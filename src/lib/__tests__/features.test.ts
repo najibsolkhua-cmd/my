@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { writeFileSync } from 'node:fs'
-import { achievements, longestStreak, plusMonths } from '../achievements'
+import { achievements, growthRun, longestStreak, plusMonths, GROUPS } from '../achievements'
+import { OLD_TO_NEW_LEVEL, LEVELS } from '../levels'
+import { migrateData, validateBackup } from '../../store'
 import { planNotifications, IDS } from '../notifyPlan'
 import { DEFAULT_SETTINGS, initialData, type AppData } from '../../store'
 import { CARD_COLORS, PATTERN_COUNT, PATTERN_NAMES } from '../../data/palette'
@@ -65,10 +67,51 @@ describe('награды', () => {
     expect(a.find((x) => x.id === 'h10')!.done).toBe(true)
     expect(a.find((x) => x.id === 'h100')!.value).toBe(10)
   })
-  it('у всех наград разные id', () => {
+  it('68 наград с разными id, все в известных группах', () => {
+    const list = achievements(base(), '2026-10-29')
+    expect(new Set(list.map((a) => a.id)).size).toBe(68)
+    for (const a of list) expect(GROUPS).toContain(a.group)
+  })
+  it('старые награды сохранились', () => {
     const ids = achievements(base(), '2026-10-29').map((a) => a.id)
-    expect(new Set(ids).size).toBe(ids.length)
-    expect(ids.length).toBeGreaterThanOrEqual(25)
+    for (const id of ['card', 'first', 'shift1', 'streak3', 'k10', 'h10', 'exp20', 'goal1', 'multi3', 'streak7', 'h100', 'marathon', 'k100', 'day10', 'rate1000', 'lvl3', 'plus1', 'multi5', 'streak30', 'h500', 'k500', 'day30', 'lvl5', 'save100', 'goal3', 'h1000', 'm1', 'lvl9'])
+      expect(ids).toContain(id)
+  })
+  it('рост недель подряд', () => {
+    // недели с понедельника: 5, 12, 19, 26 октября — доход растёт
+    const inc = [income('2026-10-05', 100), income('2026-10-12', 200), income('2026-10-19', 300), income('2026-10-26', 400)]
+    expect(growthRun({ incomes: inc })).toBe(4)
+    expect(growthRun({ incomes: [...inc, income('2026-10-20', 1000)] })).toBe(3)
+  })
+  it('секретные награды', () => {
+    const a = achievements(base({ incomes: [income('2026-11-13', 1777)] }), '2026-11-20')
+    expect(a.find((x) => x.id === 'fri13')!.done).toBe(true) // 13.11.2026 — пятница
+    expect(a.find((x) => x.id === 'lucky')!.done).toBe(true)
+    expect(a.find((x) => x.id === 'newyear')!.done).toBe(false)
+  })
+  it('камбэк после перерыва в неделю', () => {
+    const a = achievements(base({ incomes: [income('2026-10-01', 1), income('2026-10-09', 1)] }), '2026-10-29')
+    expect(a.find((x) => x.id === 'comeback')!.done).toBe(true)
+  })
+})
+
+describe('перенос на новую лестницу', () => {
+  it('старые номера уровней указывают на те же названия', () => {
+    const old = ['Нищий', 'Работяга', 'Офисный планктон', 'Менеджер', 'Топ-менеджер', 'Малый предприниматель', 'Предприниматель', 'Инвестор', 'Магнат', 'Бизнесмен']
+    old.forEach((name, i) => expect(LEVELS[OLD_TO_NEW_LEVEL[i]].name).toBe(name))
+  })
+  it('копия старой версии восстанавливается с правильным уровнем', () => {
+    const res = validateBackup({ version: 2, data: { ...initialData(), seenLevel: 3, bestLevel: 5 } })
+    expect(typeof res).toBe('object')
+    expect((res as AppData).bestLevel).toBe(7)
+    const fresh = validateBackup({ version: 3, data: { ...initialData(), bestLevel: 11 } })
+    expect((fresh as AppData).bestLevel).toBe(11)
+  })
+  it('сохранённые данные версии 2 переносятся', async () => {
+    const st = migrateData({ ...initialData(), seenLevel: 5, bestLevel: 9, counters: { shifts: 3, longestShift: 60 } }, 2)
+    expect(st.seenLevel).toBe(7)
+    expect(st.bestLevel).toBe(14)
+    expect(st.counters).toEqual({ shifts: 3, longestShift: 60, nightShifts: 0, earlyShifts: 0 })
   })
 })
 
@@ -88,5 +131,5 @@ describe('оформление', () => {
 // Для скриншотов: DEMO_OUT=путь npx vitest run пишет пример данных в файл.
 it('пример данных для скриншотов', () => {
   const out = process.env.DEMO_OUT
-  if (out) writeFileSync(out, JSON.stringify({ state: { ...demoData('2026-10-29'), settings: DEFAULT_SETTINGS, earned: null, counters: { shifts: 0, longestShift: 0 } }, version: 2 }))
+  if (out) writeFileSync(out, JSON.stringify({ state: { ...demoData('2026-10-29'), settings: DEFAULT_SETTINGS, earned: null }, version: 3 }))
 })

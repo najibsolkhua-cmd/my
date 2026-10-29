@@ -1,9 +1,10 @@
 import { Flame, Plus, Target, Trophy } from 'lucide-react'
+import { useState } from 'react'
 import { Icon } from '../components/Icon'
 import { LevelBadge } from '../components/LevelBadge'
 import { Progress } from '../components/Progress'
 import { useToday } from '../hooks'
-import { TIER_NAMES, achievements } from '../lib/achievements'
+import { GROUPS, TIER_NAMES, achievements } from '../lib/achievements'
 import { GOAL_KINDS, goalProgress } from '../lib/goals'
 import { compact, money, plural } from '../lib/format'
 import { LEVELS, levelFor, levelProgress } from '../lib/levels'
@@ -22,6 +23,7 @@ export function Levels() {
   const st = streak(data.incomes, now)
   const ach = achievements(data, now)
   const done = ach.filter((a) => a.done).length
+  const [achFilter, setAchFilter] = useState<'all' | 'done' | 'todo'>('all')
 
   return (
     <div className="screen">
@@ -123,7 +125,7 @@ export function Levels() {
                 <LevelBadge level={l} size={46} locked={locked} />
                 <div className="rung-main">
                   <b>{l.name}</b>
-                  <small>{l.min === 0 ? 'до 10 000 ₽' : `от ${money(l.min)}`}</small>
+                  <small>{l.min === 0 ? `до ${money(LEVELS[1].min)}` : `от ${money(l.min)}`}</small>
                 </div>
                 {current && <span className="tag">Ты здесь</span>}
                 {!current && !locked && <span className="tag ghost">Открыт</span>}
@@ -140,26 +142,57 @@ export function Levels() {
             {done} из {ach.length}
           </small>
         </div>
-        <div className="ach-grid">
-          {ach.map((a) => (
-            <div key={a.id} className={`ach tier-${a.tier} ${a.done ? 'done' : ''}`}>
-              <span className={`ach-icon tier-${a.tier}`}>
-                <Icon name={a.icon} size={22} />
-              </span>
-              <b>{a.title}</b>
-              <small>{a.hint}</small>
-              {!a.done && a.target > 1 && (
-                <span className="ach-progress">
-                  <Progress value={a.value / a.target} height={4} />
-                  <small>
-                    {achNumber(a.value, a.unit)} / {achNumber(a.target, a.unit)}
-                  </small>
-                </span>
-              )}
-              {a.done && <span className="ach-tier">{TIER_NAMES[a.tier]}</span>}
-            </div>
+        <Progress value={done / ach.length} height={6} color="linear-gradient(90deg, #e7a56b, #fde047, #a5f3fc)" />
+        <div className="seg sm ach-filter">
+          {(
+            [
+              ['all', 'Все'],
+              ['done', 'Получены'],
+              ['todo', 'В процессе'],
+            ] as const
+          ).map(([k, label]) => (
+            <button key={k} className={achFilter === k ? 'on' : ''} onClick={() => setAchFilter(k)}>
+              {label}
+            </button>
           ))}
         </div>
+        {GROUPS.map((group) => {
+          const list = ach.filter((a) => a.group === group && (achFilter === 'all' || (achFilter === 'done') === a.done))
+          if (!list.length) return null
+          return (
+            <div key={group} className="ach-group">
+              <div className="ach-group-head">
+                <span>{group}</span>
+                <small className="muted">
+                  {ach.filter((a) => a.group === group && a.done).length}/{ach.filter((a) => a.group === group).length}
+                </small>
+              </div>
+              <div className="ach-grid">
+                {list.map((a) => {
+                  const hidden = a.secret && !a.done
+                  return (
+                    <div key={a.id} className={`ach tier-${a.tier} ${a.done ? 'done' : ''} ${hidden ? 'secret' : ''}`}>
+                      <span className={`ach-icon tier-${a.tier}`}>
+                        <Icon name={hidden ? 'Lock' : a.icon} size={22} />
+                      </span>
+                      <b>{hidden ? 'Секрет' : a.title}</b>
+                      <small>{hidden ? 'Откроется сама, когда придёт время' : a.hint}</small>
+                      {!a.done && !hidden && a.target > 1 && (
+                        <span className="ach-progress">
+                          <Progress value={a.value / a.target} height={4} />
+                          <small>
+                            {achNumber(a.value, a.unit)} / {achNumber(a.target, a.unit)}
+                          </small>
+                        </span>
+                      )}
+                      {a.done && <span className="ach-tier">{TIER_NAMES[a.tier]}</span>}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )
+        })}
       </section>
     </div>
   )
