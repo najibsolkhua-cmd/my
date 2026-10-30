@@ -29,7 +29,7 @@
 html,
 body {
   margin: 0;
-  height: 100%;
+  height: var(--app-h, 100%);
   overflow: hidden;
   overscroll-behavior: none;
   background: #071430;
@@ -37,7 +37,9 @@ body {
 
 body {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
   background: var(--bg);
   color: var(--text);
   -webkit-user-select: none;
@@ -123,6 +125,7 @@ p {
   right: 0;
   height: var(--app-h, 100%);
   overflow: hidden;
+  will-change: transform;
 }
 
 .pager {

@@ -18,7 +18,7 @@ describe('уровни', () => {
     expect(levelFor(15_000).name).toBe('Ударник труда')
     expect(levelFor(20_000).name).toBe('Офисный планктон')
     expect(levelFor(30_000).name).toBe('Менеджер')
-    expect(levelFor(40_000).name).toBe('Король планёрок')
+    expect(levelFor(40_000).name).toBe('Мастер дедлайнов')
     expect(levelFor(50_000).name).toBe('Стартапер')
     expect(levelFor(75_000).name).toBe('Денежный мешок')
     expect(levelFor(300_000).name).toBe('Волк с Уолл-стрит')

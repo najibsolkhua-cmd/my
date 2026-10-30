@@ -99,8 +99,10 @@ function Main() {
   // Полноэкранный слой (карта, история) — поверх него могут быть шторки.
   let lastFull = -1
   layers.forEach((l, i) => FULLSCREEN.includes(l.type) && (lastFull = i))
-  const levelUp = level.index > data.seenLevel
-  const popup = !levelUp && queue.length ? ach.find((a) => a.id === queue[0]) : undefined
+  // праздник — когда пользователь закончил ввод и закрыл форму, а не поверх неё
+  const calm = layers.every((l) => FULLSCREEN.includes(l.type))
+  const levelUp = calm && level.index > data.seenLevel
+  const popup = calm && !levelUp && queue.length ? ach.find((a) => a.id === queue[0]) : undefined
 
   return (
     <div className="app">
