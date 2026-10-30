@@ -34,9 +34,18 @@ interface Confirm {
   resolve: (v: boolean) => void
 }
 
+/** Слой на экране. closing — проигрывает анимацию ухода и скоро исчезнет. */
+export type LayerEntry = Layer & { key: number; closing?: boolean; swapped?: boolean }
+
+/** Слои без тех, что уже закрываются. */
+export const activeLayers = (s: { layers: LayerEntry[] }) => s.layers.filter((l) => !l.closing)
+
+const EXIT_MS = 300
+let seq = 0
+
 interface UI {
   tab: Tab
-  layers: Layer[]
+  layers: LayerEntry[]
   toast: { text: string; key: number } | null
   confirm: Confirm | null
   setTab: (t: Tab) => void
@@ -54,46 +63,75 @@ interface UI {
 
 // Слои (шторки и экраны) связаны с историей браузера, чтобы кнопка
 // «назад» на Android и свайп назад закрывали шторку, а не приложение.
-export const useUI = create<UI>()((set, get) => ({
-  tab: savedTab(),
-  layers: [],
-  toast: null,
-  confirm: null,
-  setTab: (tab) => {
-    set({ tab })
-    try {
-      sessionStorage.setItem('kapital-tab', tab)
-    } catch {
-      /* ignore */
-    }
-  },
-  open: (l) => {
-    const depth = get().layers.length + 1
-    set((s) => ({ layers: [...s.layers, l] }))
-    try {
-      history.pushState({ depth }, '')
-    } catch {
-      /* история недоступна — слои всё равно работают */
-    }
-  },
-  replace: (l) => set((s) => ({ layers: s.layers.length ? [...s.layers.slice(0, -1), l] : [l] })),
-  close: () => get().closeMany(1),
-  closeMany: (n) => {
-    const count = Math.min(n, get().layers.length)
+// Закрытие анимированное: слой помечается closing и удаляется после анимации.
+export const useUI = create<UI>()((set, get) => {
+  const markClosing = (count: number) => {
     if (count <= 0) return
-    set((s) => ({ layers: s.layers.slice(0, s.layers.length - count) }))
-    try {
-      const steps = Math.min(count, history.state?.depth ?? 0)
-      if (steps > 0) history.go(-steps)
-    } catch {
-      /* ignore */
-    }
-  },
-  syncDepth: (depth) => set((s) => (s.layers.length > depth ? { layers: s.layers.slice(0, depth) } : s)),
-  showToast: (text) => set({ toast: { text, key: Date.now() } }),
-  ask: (c) => new Promise<boolean>((resolve) => set({ confirm: { ...c, resolve } })),
-  answer: (v) => {
-    get().confirm?.resolve(v)
-    set({ confirm: null })
-  },
-}))
+    set((s) => {
+      const layers = [...s.layers]
+      let left = count
+      for (let i = layers.length - 1; i >= 0 && left > 0; i--) {
+        if (!layers[i].closing) {
+          layers[i] = { ...layers[i], closing: true }
+          left--
+        }
+      }
+      return { layers }
+    })
+    setTimeout(() => set((s) => ({ layers: s.layers.filter((l) => !l.closing) })), EXIT_MS)
+  }
+
+  return {
+    tab: savedTab(),
+    layers: [],
+    toast: null,
+    confirm: null,
+    setTab: (tab) => {
+      set({ tab })
+      try {
+        sessionStorage.setItem('kapital-tab', tab)
+      } catch {
+        /* ignore */
+      }
+    },
+    open: (l) => {
+      const depth = activeLayers(get()).length + 1
+      set((s) => ({ layers: [...s.layers, { ...l, key: ++seq }] }))
+      try {
+        history.pushState({ depth }, '')
+      } catch {
+        /* история недоступна — слои всё равно работают */
+      }
+    },
+    replace: (l) =>
+      set((s) => {
+        const layers = [...s.layers]
+        for (let i = layers.length - 1; i >= 0; i--) {
+          if (!layers[i].closing) {
+            layers[i] = { ...l, key: layers[i].key, swapped: true }
+            return { layers }
+          }
+        }
+        return { layers: [...layers, { ...l, key: ++seq }] }
+      }),
+    close: () => get().closeMany(1),
+    closeMany: (n) => {
+      const count = Math.min(n, activeLayers(get()).length)
+      if (count <= 0) return
+      markClosing(count)
+      try {
+        const steps = Math.min(count, history.state?.depth ?? 0)
+        if (steps > 0) history.go(-steps)
+      } catch {
+        /* ignore */
+      }
+    },
+    syncDepth: (depth) => markClosing(activeLayers(get()).length - depth),
+    showToast: (text) => set({ toast: { text, key: Date.now() } }),
+    ask: (c) => new Promise<boolean>((resolve) => set({ confirm: { ...c, resolve } })),
+    answer: (v) => {
+      get().confirm?.resolve(v)
+      set({ confirm: null })
+    },
+  }
+})

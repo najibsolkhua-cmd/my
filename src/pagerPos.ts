@@ -39,6 +39,12 @@ export function bindLens(el: HTMLElement | null) {
   if (el) apply()
 }
 
+/** Доводка до вкладки с длительностью по скорости броска (как в Telegram). */
+export function animateTo(p: number, durationMs = 420) {
+  for (const el of [targets.track, targets.lens]) if (el) el.style.transitionDuration = `${Math.round(durationMs)}ms`
+  setPos(p, true)
+}
+
 /** Пока палец ведёт — без анимации, страница точно под пальцем. */
 export function setDragging(on: boolean) {
   document.documentElement.classList.toggle('dragging', on)

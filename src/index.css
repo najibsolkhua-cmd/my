@@ -1,4 +1,6 @@
 :root {
+  /* кривая iOS/Telegram: быстрый старт и мягкая остановка */
+  --ease: cubic-bezier(0.32, 0.72, 0, 1);
   --bg: #071430;
   --bg2: #0c2350;
   --panel: rgba(255, 255, 255, 0.06);
@@ -125,7 +127,64 @@ p {
   right: 0;
   height: var(--app-h, 100%);
   overflow: hidden;
-  will-change: transform;
+}
+
+main {
+  position: absolute;
+  inset: 0;
+  transition:
+    transform 0.45s var(--ease),
+    opacity 0.45s var(--ease);
+}
+
+main.behind {
+  transform: translate3d(-22%, 0, 0);
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.layer.closing {
+  pointer-events: none;
+}
+
+.app .layer.closing .detail {
+  animation: slideOut 0.3s var(--ease) forwards;
+}
+
+.app .layer.closing .sheet {
+  animation: sheetDown 0.3s var(--ease) forwards;
+}
+
+.app .layer.closing .sheet-backdrop {
+  animation: fadeOut 0.3s var(--ease) forwards;
+}
+
+/* форма сменила меню «+» в той же шторке — без повторного выезда */
+.layer.swapped .sheet,
+.layer.swapped .sheet-backdrop {
+  animation: none;
+}
+
+.layer.swapped .sheet-body {
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes slideOut {
+  to {
+    transform: translate3d(100%, 0, 0);
+  }
+}
+
+@keyframes sheetDown {
+  to {
+    transform: translate3d(0, 100%, 0);
+  }
+}
+
+@keyframes fadeOut {
+  to {
+    opacity: 0;
+  }
 }
 
 .pager {
@@ -138,7 +197,7 @@ p {
   display: flex;
   width: 400%;
   height: 100%;
-  transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: transform 0.42s cubic-bezier(0.22, 1, 0.36, 1);
   will-change: transform;
   backface-visibility: hidden;
 }
@@ -153,9 +212,10 @@ p {
   height: 100%;
   overflow-x: hidden;
   overflow-y: auto;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: none;
+  overscroll-behavior-y: contain;
   touch-action: pan-y;
+  contain: layout paint style;
 }
 
 .page > .screen {
@@ -635,7 +695,10 @@ p {
 .badge > svg {
   position: absolute;
   inset: 0;
-  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.35));
+}
+
+.badge-glow > svg {
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.4));
 }
 
 .badge-icon {
@@ -644,7 +707,6 @@ p {
   color: #fff;
   display: grid;
   place-items: center;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
 }
 
 .badge-num {
@@ -679,6 +741,7 @@ p {
   background: radial-gradient(circle, var(--glow) 0%, transparent 65%);
   opacity: 0.55;
   animation: pulse 2.6s ease-in-out infinite;
+  will-change: opacity, transform;
 }
 
 @keyframes pulse {
@@ -951,7 +1014,8 @@ p {
   touch-action: pan-y;
   background: var(--bg);
   background-image: radial-gradient(100% 50% at 50% -5%, color-mix(in srgb, var(--card) 35%, transparent) 0%, transparent 70%);
-  animation: slideIn 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  box-shadow: -18px 0 40px rgba(0, 0, 0, 0.45);
+  animation: slideIn 0.45s var(--ease);
 }
 
 .detail > * {
@@ -971,8 +1035,7 @@ p {
 
 @keyframes slideIn {
   from {
-    transform: translateX(30%);
-    opacity: 0;
+    transform: translate3d(100%, 0, 0);
   }
 }
 
@@ -1861,7 +1924,7 @@ p {
   inset: 0;
   bottom: calc(-1 * var(--kb, 0px));
   background: rgba(2, 8, 20, 0.6);
-  animation: fadeIn 0.2s ease-out;
+  animation: fadeIn 0.3s var(--ease);
 }
 
 .sheet {
@@ -1875,7 +1938,7 @@ p {
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-bottom: 0;
   border-radius: 28px 28px 0 0;
-  animation: sheetUp 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation: sheetUp 0.45s var(--ease);
   box-shadow: 0 -20px 50px -10px rgba(0, 0, 0, 0.6);
 }
 
@@ -1926,8 +1989,13 @@ p {
 
 @keyframes sheetUp {
   from {
-    transform: translateY(100%);
+    transform: translate3d(0, 100%, 0);
   }
+}
+
+.sheet-handle,
+.sheet-head {
+  touch-action: none;
 }
 
 @keyframes fadeIn {

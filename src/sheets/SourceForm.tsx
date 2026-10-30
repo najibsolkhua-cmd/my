@@ -12,7 +12,7 @@ import { plural } from '../lib/format'
 import { workStats } from '../lib/stats'
 import { useStore } from '../store'
 import type { Source, SourceType } from '../types'
-import { useUI } from '../ui'
+import { activeLayers, useUI } from '../ui'
 
 export function SourceForm({ edit, onSaved }: { edit?: Source; onSaved?: (id: string) => void }) {
   const sources = useStore((s) => s.sources)
@@ -47,7 +47,7 @@ export function SourceForm({ edit, onSaved }: { edit?: Source; onSaved?: (id: st
   }
 
   const closeWithDetail = () => {
-    const layers = useUI.getState().layers
+    const layers = activeLayers(useUI.getState())
     const below = layers[layers.length - 2]
     if (below?.type === 'card' && below.sourceId === edit?.id) closeMany(2)
     else close()

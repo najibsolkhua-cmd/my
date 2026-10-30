@@ -7,7 +7,7 @@ import { useUI } from '../ui'
 export function Sheet({ title, children, footer }: { title: ReactNode; children: ReactNode; footer?: ReactNode }) {
   const close = useUI((s) => s.close)
   const ref = useRef<HTMLDivElement>(null)
-  useSwipeDismiss(ref, { axis: 'y', onDismiss: close, scrollSelector: '.sheet-body' })
+  useSwipeDismiss(ref, { axis: 'y', onDismiss: close, handleSelector: '.sheet-handle, .sheet-head' })
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && close()
     window.addEventListener('keydown', onKey)

@@ -3,3 +3,6 @@ import { Capacitor } from '@capacitor/core'
 /** Запущено как установленное приложение (iOS/Android), а не в браузере. */
 export const isNative = Capacitor.isNativePlatform()
 export const platform = Capacitor.getPlatform() as 'ios' | 'android' | 'web'
+
+/** iPhone/iPad — в браузере или в приложении. */
+export const isIOS = platform === 'ios' || /iP(hone|od|ad)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)

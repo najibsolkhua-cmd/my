@@ -1,5 +1,5 @@
 import { isNative } from './platform'
-import { useUI } from './ui'
+import { activeLayers, useUI } from './ui'
 
 export { isNative }
 
@@ -10,7 +10,7 @@ export async function setupNative() {
   App.addListener('backButton', () => {
     const ui = useUI.getState()
     if (ui.confirm) ui.answer(false)
-    else if (ui.layers.length) ui.close()
+    else if (activeLayers(ui).length) ui.close()
     else if (ui.tab !== 'home') ui.setTab('home')
     else App.exitApp()
   })

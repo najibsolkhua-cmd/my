@@ -99,22 +99,28 @@ function Main() {
   // Полноэкранный слой (карта, история) — поверх него могут быть шторки.
   let lastFull = -1
   layers.forEach((l, i) => FULLSCREEN.includes(l.type) && (lastFull = i))
+  const fullOpen = layers.some((l) => FULLSCREEN.includes(l.type) && !l.closing)
   // праздник — когда пользователь закончил ввод и закрыл форму, а не поверх неё
-  const calm = layers.every((l) => FULLSCREEN.includes(l.type))
+  const calm = layers.every((l) => FULLSCREEN.includes(l.type) || l.closing)
   const levelUp = calm && level.index > data.seenLevel
   const popup = calm && !levelUp && queue.length ? ach.find((a) => a.id === queue[0]) : undefined
 
   return (
     <div className="app">
       <div className="app-bg" aria-hidden />
-      <main aria-hidden={lastFull >= 0}>
+      {/* под открытым экраном главный слегка уезжает влево и темнеет — как переход в чат */}
+      <main aria-hidden={fullOpen} className={fullOpen ? 'behind' : ''}>
         <Pager />
       </main>
+      {!fullOpen && <BottomNav />}
       {layers.map((l, i) => {
-        if (FULLSCREEN.includes(l.type) && i !== lastFull) return null
-        return <div key={`${i}-${l.type}`}>{renderLayer(l)}</div>
+        if (FULLSCREEN.includes(l.type) && i !== lastFull && !l.closing) return null
+        return (
+          <div key={l.key} className={`layer${l.closing ? ' closing' : ''}${l.swapped ? ' swapped' : ''}`}>
+            {renderLayer(l)}
+          </div>
+        )
       })}
-      {lastFull < 0 && <BottomNav />}
       {levelUp && <LevelUp level={LEVELS[level.index]} onClose={() => data.setSeenLevel(level.index)} />}
       {popup && <AchievementPopup a={popup} more={queue.length - 1} onClose={() => setQueue((q) => q.slice(1))} />}
       <ConfirmHost />
