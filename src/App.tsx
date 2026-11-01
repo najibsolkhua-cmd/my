@@ -114,6 +114,7 @@ function Main() {
   return (
     <div className="app">
       <div className="app-bg" aria-hidden />
+      <div className="status-bar" aria-hidden />
       {/* под открытым экраном главный слегка уезжает влево и темнеет — как переход в чат */}
       <main aria-hidden={fullOpen} className={fullOpen ? 'behind' : ''}>
         <Pager />

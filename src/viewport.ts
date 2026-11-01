@@ -3,6 +3,10 @@ import { isNative } from './platform'
 
 const root = document.documentElement
 let appHeight = window.innerHeight
+// самая большая высота окна без клавиатуры для текущей ширины (поворот сбрасывает)
+let maxInner = window.innerHeight
+let maxWidth = window.innerWidth
+const standalone = () => matchMedia('(display-mode: standalone)').matches || (navigator as { standalone?: boolean }).standalone === true
 
 /**
  * Высота приложения. iOS в режиме «На экран Домой» иногда отдаёт окно короче экрана
@@ -10,9 +14,13 @@ let appHeight = window.innerHeight
  * Берём настоящую высоту экрана; html и body получают её же, чтобы ничего не обрезали.
  */
 function fitHeight() {
-  const standalone = matchMedia('(display-mode: standalone)').matches || (navigator as { standalone?: boolean }).standalone === true
-  const portrait = window.innerHeight >= window.innerWidth
-  appHeight = standalone && portrait ? Math.max(window.innerHeight, screen.height) : window.innerHeight
+  if (window.innerWidth !== maxWidth) {
+    maxWidth = window.innerWidth
+    maxInner = 0
+  }
+  if (!root.classList.contains('kb-open')) maxInner = Math.max(maxInner, window.innerHeight)
+  const portrait = window.innerHeight >= window.innerWidth || maxInner >= window.innerWidth
+  appHeight = standalone() && portrait ? Math.max(maxInner, screen.height) : maxInner
   root.style.setProperty('--app-h', `${appHeight}px`)
 }
 
@@ -38,10 +46,8 @@ function setKeyboard(h: number) {
  */
 export function setupViewport() {
   fitHeight()
-  let lastWidth = window.innerWidth
   window.addEventListener('resize', () => {
-    if (window.innerWidth !== lastWidth || !root.classList.contains('kb-open')) fitHeight()
-    lastWidth = window.innerWidth
+    if (!root.classList.contains('kb-open') || window.innerWidth !== maxWidth) fitHeight()
   })
 
   if (isNative) {
@@ -57,7 +63,10 @@ export function setupViewport() {
   const apply = () => {
     frame = 0
     const app = document.querySelector<HTMLElement>('.app')
-    const open = vv.height < window.innerHeight - 80
+    // Высоту клавиатуры считаем от полной высоты приложения: в iOS 26 в режиме
+    // «На экран Домой» вместе с клавиатурой уменьшается и window.innerHeight,
+    // поэтому сравнивать с ним нельзя.
+    const open = appHeight - vv.height > 120
     // компенсируем сдвиг, который сделала iOS
     const shift = open ? Math.max(0, vv.offsetTop) : 0
     if (app) app.style.transform = shift ? `translate3d(0, ${shift}px, 0)` : ''
