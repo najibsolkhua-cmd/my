@@ -3,6 +3,7 @@ import { goalProgress } from './goals'
 import { levelFor } from './levels'
 import { addDays, parseDate, startOfWeek, type DateStr } from './dates'
 import { bestWeek, streak, sum, workStats } from './stats'
+import { balanceOf, debtsSummary } from './money'
 
 export type Tier = 'bronze' | 'silver' | 'gold' | 'diamond'
 
@@ -24,7 +25,7 @@ export interface Achievement {
 
 export const TIER_NAMES: Record<Tier, string> = { bronze: 'Бронза', silver: 'Серебро', gold: 'Золото', diamond: 'Бриллиант' }
 
-export const GROUPS = ['Старт', 'Деньги', 'Цена часа', 'Время', 'Смены', 'Серии', 'Источники', 'Уровни', 'Расходы и цели', 'Секретные']
+export const GROUPS = ['Старт', 'Деньги', 'Цена часа', 'Время', 'Таймер работы', 'Серии', 'Источники', 'Уровни', 'Расходы и цели', 'Долги', 'Секретные']
 
 /** Самая длинная серия дней подряд с доходом за всё время. */
 export function longestStreak(dates: DateStr[]): number {
@@ -95,7 +96,10 @@ export function achievements(d: AppData, now: DateStr): Achievement[] {
   )
   const level = Math.max(d.bestLevel, levelFor(bestWeek(d.incomes)).index)
   const goalsDone = d.goals.filter((g) => goalProgress(g, d, now).ratio >= 1).length
-  const balance = total - sum(d.expenses)
+  const balance = balanceOf(d)
+  const debts = debtsSummary(d)
+  const debtPayments = d.expenses.filter((x) => x.debtId && d.debts.some((y) => y.id === x.debtId))
+  const debtRepaid = debts.all.reduce((s, x) => s + Math.min(x.paid, x.debt.amount), 0)
   const { inc: monthInc, exp: monthExp, expCount } = monthSums(d)
   const bestMonth = Math.max(0, ...monthInc.values())
   const thisMonth = now.slice(0, 7)
@@ -165,15 +169,15 @@ export function achievements(d: AppData, now: DateStr): Achievement[] {
       ],
     ],
     [
-      'Смены',
+      'Таймер работы',
       [
-        { id: 'shift1', title: 'Первая смена', hint: 'Засеки смену таймером', icon: 'Timer', tier: 'bronze', value: d.counters.shifts, target: 1 },
-        { id: 'shift10', title: 'Сменщик', hint: 'Отработай 10 смен с таймером', icon: 'Repeat', tier: 'bronze', value: d.counters.shifts, target: 10 },
-        { id: 'shift50', title: 'Вахтовик', hint: 'Отработай 50 смен с таймером', icon: 'Anchor', tier: 'gold', value: d.counters.shifts, target: 50 },
-        { id: 'marathon', title: 'Марафонец', hint: 'Смена 8 часов без остановки', icon: 'Timer', tier: 'silver', value: d.counters.longestShift / 60, target: 8, unit: 'ч' },
-        { id: 'iron12', title: 'Железный человек', hint: 'Смена 12 часов без остановки', icon: 'Shield', tier: 'gold', value: d.counters.longestShift / 60, target: 12, unit: 'ч' },
-        { id: 'night', title: 'Ночная сова', hint: 'Начни смену ночью (22:00–05:00)', icon: 'Moon', tier: 'silver', value: d.counters.nightShifts, target: 1 },
-        { id: 'early', title: 'Ранняя пташка', hint: 'Начни смену до 7 утра', icon: 'Sunrise', tier: 'silver', value: d.counters.earlyShifts, target: 1 },
+        { id: 'shift1', title: 'Время пошло', hint: 'Засеки работу таймером', icon: 'Timer', tier: 'bronze', value: d.counters.shifts, target: 1 },
+        { id: 'shift10', title: 'В ритме', hint: 'Засеки работу таймером 10 раз', icon: 'Repeat', tier: 'bronze', value: d.counters.shifts, target: 10 },
+        { id: 'shift50', title: 'Профи', hint: 'Засеки работу таймером 50 раз', icon: 'Anchor', tier: 'gold', value: d.counters.shifts, target: 50 },
+        { id: 'marathon', title: 'Марафонец', hint: '8 часов работы без остановки', icon: 'Timer', tier: 'silver', value: d.counters.longestShift / 60, target: 8, unit: 'ч' },
+        { id: 'iron12', title: 'Железный человек', hint: '12 часов работы без остановки', icon: 'Shield', tier: 'gold', value: d.counters.longestShift / 60, target: 12, unit: 'ч' },
+        { id: 'night', title: 'Ночная сова', hint: 'Начни работу ночью (22:00–05:00)', icon: 'Moon', tier: 'silver', value: d.counters.nightShifts, target: 1 },
+        { id: 'early', title: 'Ранняя пташка', hint: 'Начни работу до 7 утра', icon: 'Sunrise', tier: 'silver', value: d.counters.earlyShifts, target: 1 },
       ],
     ],
     [
@@ -222,10 +226,22 @@ export function achievements(d: AppData, now: DateStr): Achievement[] {
         { id: 'plus1', title: 'В плюсе', hint: 'Закрой месяц, заработав больше, чем потратил', icon: 'PiggyBank', tier: 'silver', value: plusMonths(d, now), target: 1 },
         { id: 'plus3', title: 'Стабильность', hint: '3 месяца в плюсе', icon: 'ChartLine', tier: 'gold', value: plusMonths(d, now), target: 3, unit: 'мес' },
         { id: 'thrifty', title: 'Экономист', hint: 'Месяц, где расходы меньше половины дохода', icon: 'BadgePercent', tier: 'gold', value: yes(thrifty), target: 1 },
-        { id: 'save100', title: 'Подушка', hint: 'Накопи остаток 100 000 ₽', icon: 'Umbrella', tier: 'gold', value: balance, target: 100_000, unit: '₽' },
-        { id: 'save500', title: 'Кубышка', hint: 'Накопи остаток 500 000 ₽', icon: 'Wallet', tier: 'diamond', value: balance, target: 500_000, unit: '₽' },
+        { id: 'save100', title: 'Подушка', hint: 'Накопи на счету 100 000 ₽', icon: 'Umbrella', tier: 'gold', value: balance, target: 100_000, unit: '₽' },
+        { id: 'save500', title: 'Кубышка', hint: 'Накопи на счету 500 000 ₽', icon: 'Wallet', tier: 'diamond', value: balance, target: 500_000, unit: '₽' },
         { id: 'goal1', title: 'Цель взята', hint: 'Достигни любой цели', icon: 'Target', tier: 'bronze', value: goalsDone, target: 1 },
         { id: 'goal3', title: 'Мечтатель', hint: 'Достигни 3 целей', icon: 'Rocket', tier: 'gold', value: goalsDone, target: 3 },
+      ],
+    ],
+    [
+      // только за погашение — не за то, что долг взят
+      'Долги',
+      [
+        { id: 'debtPay1', title: 'Первый взнос', hint: 'Внеси первый платёж по долгу', icon: 'HandCoins', tier: 'bronze', value: debtPayments.length, target: 1 },
+        { id: 'debtBig', title: 'Крупный платёж', hint: 'Платёж по долгу от 10 000 ₽', icon: 'Banknote', tier: 'silver', value: Math.max(0, ...debtPayments.map((x) => x.amount)), target: 10_000, unit: '₽' },
+        { id: 'debtClose1', title: 'Минус один', hint: 'Погаси долг полностью', icon: 'BadgeCheck', tier: 'silver', value: debts.closed.length, target: 1 },
+        { id: 'free', title: 'Свободный человек', hint: 'Погаси все долги до последнего', icon: 'Feather', tier: 'gold', value: yes(d.debts.length > 0 && debts.open.length === 0), target: 1 },
+        { id: 'debtClose5', title: 'Расчётливый', hint: 'Погаси 5 долгов', icon: 'Medal', tier: 'gold', value: debts.closed.length, target: 5 },
+        { id: 'debt100', title: 'Сто тысяч долой', hint: 'Погаси долгов на 100 000 ₽ в сумме', icon: 'Trophy', tier: 'diamond', value: debtRepaid, target: 100_000, unit: '₽' },
       ],
     ],
     [

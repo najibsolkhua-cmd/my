@@ -1,23 +1,31 @@
 import { Plus, Trash2 } from 'lucide-react'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { AmountInput } from '../components/AmountInput'
 import { DateField } from '../components/DateField'
 import { Field } from '../components/Field'
 import { Icon } from '../components/Icon'
 import { Sheet } from '../components/Sheet'
 import { today } from '../lib/dates'
-import { formatAmountInput, parseAmount } from '../lib/format'
-import { useStore } from '../store'
+import { formatAmountInput, money, parseAmount } from '../lib/format'
+import { debtStatus } from '../lib/money'
+import { DEBT_CATEGORY, useStore } from '../store'
 import type { Expense } from '../types'
 import { useUI } from '../ui'
 
-export function ExpenseForm({ edit, categoryId: initialCategory }: { edit?: Expense; categoryId?: string }) {
+export function ExpenseForm({ edit, categoryId: initialCategory, debtId: initialDebt, amount: initialAmount }: { edit?: Expense; categoryId?: string; debtId?: string; amount?: number }) {
   const categories = useStore((s) => s.categories)
+  const debts = useStore((s) => s.debts)
+  const expenses = useStore((s) => s.expenses)
   const { addExpense, updateExpense, deleteExpense } = useStore.getState()
   const { close, showToast, ask, open } = useUI.getState()
 
-  const [categoryId, setCategoryId] = useState(edit?.categoryId ?? initialCategory ?? '')
-  const [amount, setAmount] = useState(edit ? formatAmountInput(String(edit.amount).replace('.', ',')) : '')
+  const [debtId, setDebtId] = useState(edit?.debtId ?? initialDebt ?? '')
+  const [categoryId, setCategoryId] = useState(edit?.categoryId ?? initialCategory ?? (initialDebt ? DEBT_CATEGORY : ''))
+  const startAmount = edit?.amount ?? initialAmount
+  const [amount, setAmount] = useState(startAmount ? formatAmountInput(String(startAmount).replace('.', ',')) : '')
+  // долги, которые ещё не закрыты (без учёта этого же платежа при редактировании)
+  const others = useMemo(() => expenses.filter((x) => x.id !== edit?.id), [expenses, edit?.id])
+  const openDebts = debts.map((d) => debtStatus(d, others)).filter((d) => !d.closed || d.debt.id === debtId)
   const [date, setDate] = useState(edit?.date ?? today())
   const [note, setNote] = useState(edit?.note ?? '')
 
@@ -26,10 +34,13 @@ export function ExpenseForm({ edit, categoryId: initialCategory }: { edit?: Expe
 
   const save = () => {
     if (!valid) return
-    const data = { categoryId, amount: value, date, note: note.trim() || undefined }
+    const data = { categoryId, amount: value, date, note: note.trim() || undefined, debtId: debtId || undefined }
     if (edit) updateExpense(edit.id, data)
     else addExpense(data)
-    showToast(edit ? 'Сохранено' : `−${amount} ₽ записано`)
+    const debt = openDebts.find((d) => d.debt.id === debtId)
+    if (debt && !debt.closed && value >= debt.left) showToast(`Долг «${debt.debt.title}» погашен 🎉`)
+    else if (debt) showToast(`−${amount} ₽ в счёт долга · осталось ${money(Math.max(0, debt.left - value))}`)
+    else showToast(edit ? 'Сохранено' : `−${amount} ₽ записано`)
     close()
   }
 
@@ -59,6 +70,25 @@ export function ExpenseForm({ edit, categoryId: initialCategory }: { edit?: Expe
       }
     >
       <AmountInput value={amount} onChange={setAmount} autoFocus={!edit && !!initialCategory} tone="minus" />
+      {openDebts.length > 0 && (
+        <Field label="В счёт долга" hint={debtId ? 'спишется с долга' : 'необязательно'}>
+          <div className="chips">
+            {openDebts.map((d) => (
+              <button
+                key={d.debt.id}
+                className={`chip ${debtId === d.debt.id ? 'on' : ''}`}
+                onClick={() => {
+                  const next = debtId === d.debt.id ? '' : d.debt.id
+                  setDebtId(next)
+                  if (next && !categoryId) setCategoryId(DEBT_CATEGORY)
+                }}
+              >
+                {d.debt.title} · {money(d.left)}
+              </button>
+            ))}
+          </div>
+        </Field>
+      )}
       <Field label="Категория">
         <div className="cat-grid">
           {categories.map((c) => (

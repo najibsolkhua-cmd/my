@@ -9,6 +9,8 @@ import { last7 } from './lib/stats'
 import { CardDetail } from './screens/CardDetail'
 import { History } from './screens/History'
 import { AddMenu } from './sheets/AddMenu'
+import { CapitalForm } from './sheets/CapitalForm'
+import { DebtForm } from './sheets/DebtForm'
 import { CategoryForm } from './sheets/CategoryForm'
 import { ExpenseForm } from './sheets/ExpenseForm'
 import { GoalForm } from './sheets/GoalForm'
@@ -28,7 +30,11 @@ function renderLayer(l: Layer) {
     case 'income':
       return <IncomeForm edit={l.edit} sourceId={l.sourceId} minutes={l.minutes} />
     case 'expense':
-      return <ExpenseForm edit={l.edit} categoryId={l.categoryId} />
+      return <ExpenseForm edit={l.edit} categoryId={l.categoryId} debtId={l.debtId} amount={l.amount} />
+    case 'capital':
+      return <CapitalForm />
+    case 'debt':
+      return <DebtForm edit={l.edit} />
     case 'source':
       return <SourceForm edit={l.edit} onSaved={l.onSaved} />
     case 'category':

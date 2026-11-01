@@ -5,7 +5,7 @@ import { useStore } from '../store'
 import { useUI } from '../ui'
 import { Icon } from './Icon'
 
-/** Плашка идущей смены с таймером. */
+/** Плашка идущей работы с таймером. */
 export function ShiftBanner() {
   const shift = useStore((s) => s.shift)
   const source = useStore((s) => s.sources.find((x) => x.id === s.shift?.sourceId))
@@ -18,7 +18,7 @@ export function ShiftBanner() {
     if (res) useUI.getState().open({ type: 'income', sourceId: res.sourceId, minutes: res.minutes })
   }
   const cancel = async () => {
-    if (await useUI.getState().ask({ title: 'Отменить смену?', text: 'Время не будет записано.', ok: 'Отменить смену', danger: true })) useStore.getState().cancelShift()
+    if (await useUI.getState().ask({ title: 'Сбросить таймер?', text: 'Время не будет записано.', ok: 'Сбросить', danger: true })) useStore.getState().cancelShift()
   }
 
   return (
@@ -28,11 +28,11 @@ export function ShiftBanner() {
       </span>
       <div className="shift-main">
         <small>
-          <span className="live-dot" /> Идёт смена · {source.name}
+          <span className="live-dot" /> Идёт работа · {source.name}
         </small>
         <b>{clock(now - shift.startedAt)}</b>
       </div>
-      <button className="icon-btn sm" onClick={cancel} aria-label="Отменить смену">
+      <button className="icon-btn sm" onClick={cancel} aria-label="Сбросить таймер">
         <X size={16} />
       </button>
       <button className="btn primary sm" onClick={stop}>

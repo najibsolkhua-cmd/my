@@ -44,7 +44,7 @@ export function CardDetail({ sourceId }: { sourceId: string }) {
       if (res) open({ type: 'income', sourceId: res.sourceId, minutes: res.minutes })
     } else if (!shift) {
       useStore.getState().startShift(sourceId)
-      useUI.getState().showToast('Смена началась — удачи!')
+      useUI.getState().showToast('Таймер запущен — удачи!')
     }
   }
 
@@ -73,11 +73,11 @@ export function CardDetail({ sourceId }: { sourceId: string }) {
           <button className={`btn ${live ? 'live' : 'ghost'} wide`} onClick={toggleShift} disabled={busyElsewhere}>
             {live ? (
               <>
-                <Square size={16} fill="currentColor" /> Завершить · {clock(now - shift!.startedAt)}
+                <Square size={16} fill="currentColor" /> Стоп · {clock(now - shift!.startedAt)}
               </>
             ) : (
               <>
-                <Play size={18} /> {busyElsewhere ? 'Идёт другая смена' : 'Начать смену'}
+                <Play size={18} /> {busyElsewhere ? 'Таймер уже идёт' : 'Начать работу'}
               </>
             )}
           </button>

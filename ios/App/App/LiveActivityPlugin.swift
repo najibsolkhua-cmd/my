@@ -2,7 +2,7 @@ import ActivityKit
 import Capacitor
 import Foundation
 
-/// Мост между приложением и Live Activity: запуск и остановка секундомера смены.
+/// Мост между приложением и Live Activity: запуск и остановка секундомера работы.
 @objc(LiveActivityPlugin)
 public class LiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
     public let identifier = "LiveActivityPlugin"
@@ -27,7 +27,7 @@ public class LiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
             return
         }
         let attributes = ShiftAttributes(
-            name: call.getString("name") ?? "Смена",
+            name: call.getString("name") ?? "Работа",
             colorHex: call.getString("color") ?? "#7CB4FF",
             inkHex: call.getString("ink") ?? "#0B1C3D",
             symbol: call.getString("symbol") ?? "timer"
@@ -35,7 +35,7 @@ public class LiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
         let startedAt = Date(timeIntervalSince1970: (call.getDouble("startedAt") ?? Date().timeIntervalSince1970 * 1000) / 1000)
 
         Task {
-            // Такая смена уже показана — ничего не трогаем, чтобы не мигало.
+            // Такой таймер уже показан — ничего не трогаем, чтобы не мигало.
             let existing = Activity<ShiftAttributes>.activities
             if let same = existing.first(where: {
                 $0.activityState == .active && $0.attributes.name == attributes.name

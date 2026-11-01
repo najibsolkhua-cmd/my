@@ -36,7 +36,7 @@ export function IncomeCard({ source, total, minutes, rate, live, className = '',
           <span>{sourceTypeLabel(source.type)}</span>
         </div>
         <div className="ccard-icon">
-          {live && <span className="live-dot" title="Идёт смена" />}
+          {live && <span className="live-dot" title="Идёт работа" />}
           <Icon name={source.icon} size={22} />
         </div>
       </div>

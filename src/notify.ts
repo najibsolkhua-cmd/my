@@ -52,7 +52,7 @@ async function ensureChannels() {
   if (platform !== 'android' || channelsReady) return
   const ln = plugin()
   await ln.createChannel({ id: 'reminders', name: 'Напоминания', description: 'Напоминания и итоги недели', importance: 4 })
-  await ln.createChannel({ id: 'shift', name: 'Идущая смена', description: 'Таймер смены в шторке', importance: 2, vibration: false })
+  await ln.createChannel({ id: 'shift', name: 'Таймер работы', description: 'Таймер работы в шторке', importance: 2, vibration: false })
   channelsReady = true
 }
 
@@ -81,7 +81,7 @@ async function syncScheduled(d: AppData) {
 }
 
 let lastShiftKey = ''
-/** Таймер смены: Live Activity на iPhone, постоянное уведомление на Android. */
+/** Таймер работы: Live Activity на iPhone, постоянное уведомление на Android. */
 async function syncShift(d: AppData) {
   const show = d.settings.liveActivity && d.shift ? d.shift : null
   const source = show ? d.sources.find((s) => s.id === show.sourceId) : undefined
@@ -106,14 +106,14 @@ async function syncShift(d: AppData) {
     const started = new Date(show.startedAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
     await ln.schedule({
       notifications: [
-        { id: IDS.ongoing, title: `Идёт смена · ${source.name}`, body: `Начата в ${started}. Нажми, чтобы завершить.`, ongoing: true, autoCancel: false, channelId: 'shift', smallIcon: 'ic_stat_notify', iconColor: '#7CB4FF' },
+        { id: IDS.ongoing, title: `Идёт работа · ${source.name}`, body: `Таймер запущен в ${started}. Нажми, чтобы остановить.`, ongoing: true, autoCancel: false, channelId: 'shift', smallIcon: 'ic_stat_notify', iconColor: '#7CB4FF' },
       ],
     })
   }
 }
 
 let timer: ReturnType<typeof setTimeout> | undefined
-/** Пересчитывает уведомления и таймер смены (с небольшой задержкой, чтобы не дёргать на каждое изменение). */
+/** Пересчитывает уведомления и таймер работы (с небольшой задержкой, чтобы не дёргать на каждое изменение). */
 export function scheduleSync(delay = 800) {
   if (!isNative) return
   clearTimeout(timer)

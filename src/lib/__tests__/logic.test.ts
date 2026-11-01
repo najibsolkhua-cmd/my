@@ -146,9 +146,12 @@ describe('форматирование и ввод', () => {
 describe('цели и резервные копии', () => {
   it('цель «накопить» считает остаток', () => {
     const g = { id: 'g', title: '', kind: 'save' as const, target: 1000, createdAt: 0 }
-    const p = goalProgress(g, { incomes: [{ ...inc('2026-10-01', 1500), id: 'a', sourceId: 's' }], expenses: [{ id: 'e', categoryId: 'c', amount: 1000, date: '2026-10-02', createdAt: 0 }] }, '2026-10-29')
+    const d = { startCapital: 0, incomes: [{ ...inc('2026-10-01', 1500), id: 'a', sourceId: 's' }], expenses: [{ id: 'e', categoryId: 'c', amount: 1000, date: '2026-10-02', createdAt: 0 }] }
+    const p = goalProgress(g, d, '2026-10-29')
     expect(p.value).toBe(500)
     expect(p.ratio).toBe(0.5)
+    // стартовый капитал входит в «На счету»
+    expect(goalProgress(g, { ...d, startCapital: 250 }, '2026-10-29').value).toBe(750)
   })
   it('демо-данные проходят проверку копии', () => {
     const d = demoData('2026-10-29')

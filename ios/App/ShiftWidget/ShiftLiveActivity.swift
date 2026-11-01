@@ -2,7 +2,7 @@ import ActivityKit
 import SwiftUI
 import WidgetKit
 
-/// Секундомер смены: экран блокировки и Dynamic Island.
+/// Секундомер работы: экран блокировки и Dynamic Island.
 /// Text(timerInterval:) считает время сам, приложению не нужно его обновлять.
 struct ShiftLiveActivity: Widget {
     var body: some WidgetConfiguration {
@@ -17,7 +17,7 @@ struct ShiftLiveActivity: Widget {
                     HStack(spacing: 8) {
                         CardIcon(attributes: context.attributes, size: 36)
                         VStack(alignment: .leading, spacing: 1) {
-                            Text("Смена")
+                            Text("Работа")
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
                             Text(context.attributes.name)
@@ -72,7 +72,7 @@ private struct LockScreenView: View {
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
                     Circle().fill(Color.red).frame(width: 8, height: 8)
-                    Text("Идёт смена")
+                    Text("Идёт работа")
                         .font(.caption)
                         .foregroundStyle(Color.white.opacity(0.7))
                 }
@@ -108,7 +108,7 @@ private struct CardIcon: View {
     }
 }
 
-/// Растущий счётчик «чч:мм:сс» от начала смены.
+/// Растущий счётчик «чч:мм:сс» от начала работы.
 private struct ElapsedText: View {
     let startedAt: Date
 

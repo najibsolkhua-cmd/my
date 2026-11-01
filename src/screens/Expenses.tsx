@@ -4,6 +4,7 @@ import { BarChart } from '../components/BarChart'
 import { Donut } from '../components/Donut'
 import { Icon } from '../components/Icon'
 import { OpRow } from '../components/OpRow'
+import { DebtsPanel } from '../components/DebtsPanel'
 import { PeriodBar } from '../components/PeriodBar'
 import { usePaged } from '../components/ShowMore'
 import { useToday } from '../hooks'
@@ -67,6 +68,8 @@ export function Expenses() {
           ))}
         </div>
       </section>
+
+      <DebtsPanel />
 
       <section>
         <div className="section-head">

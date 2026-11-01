@@ -1,8 +1,9 @@
-import { Bell, Download, RotateCcw, Smartphone, Timer, Upload } from 'lucide-react'
+import { Bell, Download, PiggyBank, RotateCcw, Smartphone, Timer, Upload } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Sheet } from '../components/Sheet'
 import { Toggle } from '../components/Toggle'
 import { today } from '../lib/dates'
+import { money } from '../lib/format'
 import { isNative, saveTextFile } from '../native'
 import { liveActivityAvailable, requestNotifications } from '../notify'
 import { platform } from '../platform'
@@ -14,6 +15,7 @@ export function Settings() {
   const { showToast, ask, close } = useUI.getState()
   const settings = useStore((s) => s.settings)
   const setSettings = useStore((s) => s.setSettings)
+  const startCapital = useStore((s) => s.startCapital)
   const [laAvailable, setLaAvailable] = useState(true)
 
   useEffect(() => {
@@ -42,7 +44,7 @@ export function Settings() {
       showToast(res)
       return
     }
-    const counts = `${res.sources.length} карт, ${res.incomes.length} доходов, ${res.expenses.length} расходов`
+    const counts = `${res.sources.length} карт, ${res.incomes.length} доходов, ${res.expenses.length} расходов, ${res.debts.length} долгов`
     if (await ask({ title: 'Восстановить из копии?', text: `В копии: ${counts}. Текущие данные будут заменены.`, ok: 'Восстановить', danger: true })) {
       useStore.getState().replaceAll(res)
       showToast('Данные восстановлены')
@@ -96,7 +98,7 @@ export function Settings() {
         <>
           <div className="settings-group">
             <div className="settings-title">
-              <Timer size={16} /> Таймер смены
+              <Timer size={16} /> Таймер работы
             </div>
             <Toggle
               checked={settings.liveActivity}
@@ -113,7 +115,7 @@ export function Settings() {
             <div className="settings-title">
               <Bell size={16} /> Уведомления
             </div>
-            <Toggle checked={settings.notifications} onChange={toggleNotifications} label="Уведомления" hint="Напоминания, смены, итоги недели" />
+            <Toggle checked={settings.notifications} onChange={toggleNotifications} label="Уведомления" hint="Напоминания, таймер, итоги недели" />
             {settings.notifications && (
               <>
                 <Toggle checked={settings.daily} onChange={(v) => setSettings({ daily: v })} label="Напомнить записать доход" hint="Не придёт, если сегодня уже записал" />
@@ -125,7 +127,7 @@ export function Settings() {
                     <input type="time" className="input time-input" value={settings.dailyTime} onChange={(e) => e.target.value && setSettings({ dailyTime: e.target.value })} />
                   </label>
                 )}
-                <Toggle checked={settings.shiftAlerts} onChange={(v) => setSettings({ shiftAlerts: v })} label="Долгая смена" hint="Через 4, 8 и 12 часов — чтобы не забыть её завершить" />
+                <Toggle checked={settings.shiftAlerts} onChange={(v) => setSettings({ shiftAlerts: v })} label="Долгая работа" hint="Через 4, 8 и 12 часов — чтобы не забыть остановить таймер" />
                 <Toggle checked={settings.weekly} onChange={(v) => setSettings({ weekly: v })} label="Итоги недели" hint="По понедельникам в 10:00" />
               </>
             )}
@@ -134,13 +136,20 @@ export function Settings() {
       ) : (
         <div className="note">
           <Bell size={18} />
-          <p>Уведомления и таймер смены на экране блокировки работают в приложении для iPhone и Android.</p>
+          <p>Уведомления и таймер работы на экране блокировки работают в приложении для iPhone и Android.</p>
         </div>
       )}
 
       <div className="settings-group">
         <div className="settings-title">Данные</div>
         <div className="menu">
+          <button className="menu-item" onClick={() => useUI.getState().open({ type: 'capital' })}>
+            <PiggyBank size={20} />
+            <span>
+              <b>Стартовый капитал</b>
+              <small>{startCapital ? `${money(startCapital)} — деньги до начала учёта` : 'сколько было до начала учёта'}</small>
+            </span>
+          </button>
           <button className="menu-item" onClick={exportData}>
             <Download size={20} />
             <span>

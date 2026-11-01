@@ -11,12 +11,12 @@ export function PickSource({ purpose }: { purpose: 'shift' | 'income' }) {
     const ui = useUI.getState()
     if (purpose === 'shift') {
       useStore.getState().startShift(id)
-      ui.showToast(`Смена «${sources.find((s) => s.id === id)?.name}» началась`)
+      ui.showToast(`Таймер «${sources.find((s) => s.id === id)?.name}» запущен`)
       ui.close()
     } else ui.replace({ type: 'income', sourceId: id })
   }
   return (
-    <Sheet title={purpose === 'shift' ? 'На какой карте смена?' : 'Выбери карту'}>
+    <Sheet title={purpose === 'shift' ? 'Над чем работаешь?' : 'Выбери карту'}>
       <div className="pick-list">
         {sources.map((s) => {
           const c = cardColor(s.color)

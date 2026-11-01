@@ -510,9 +510,122 @@ main.behind {
   padding: 20px;
 }
 
+.hero-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
 .hero-label {
   color: #bcd3f5;
   font-size: 14px;
+}
+
+.hero-capital {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #bcd3f5;
+  padding: 5px 10px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--line);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.hero-debt {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: -6px 0 2px;
+  font-size: 13.5px;
+  color: #ffc2cc;
+  text-align: left;
+}
+
+.hero-debt b {
+  color: var(--minus);
+  font-variant-numeric: tabular-nums;
+}
+
+.period-pills {
+  margin-bottom: 14px;
+}
+
+.minus-text {
+  color: var(--minus);
+}
+
+.sheet-text {
+  font-size: 14px;
+  color: #c9d8f0;
+  line-height: 1.45;
+}
+
+.debt-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.debt-total b {
+  font-size: 20px;
+  color: var(--minus);
+}
+
+.debt {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+}
+
+.debt-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.debt-left {
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-weight: 650;
+}
+
+.debt-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  text-align: left;
+}
+
+.debt-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  font-variant-numeric: tabular-nums;
+}
+
+.debt-line b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.debt.closed {
+  opacity: 0.7;
 }
 
 .hero-amount {
@@ -587,7 +700,7 @@ main.behind {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
-  margin-top: 14px;
+  margin-top: 10px;
 }
 
 .hero-actions button {
@@ -907,25 +1020,22 @@ main.behind {
 }
 
 .mini-cards {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 10px;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  margin: 0 -16px;
-  padding: 0 16px 8px;
-  scrollbar-width: none;
 }
 
-.mini-cards::-webkit-scrollbar {
-  display: none;
+/* нечётная последняя карта — на всю ширину, чтобы сетка не «висела» */
+.mini-cards > .ccard.mini:last-child:nth-child(odd) {
+  grid-column: span 2;
 }
 
 .ccard.mini {
-  width: 220px;
-  height: 138px;
+  width: auto;
+  min-width: 0;
+  height: 128px;
   border-radius: 18px;
   padding: 12px 14px;
-  scroll-snap-align: start;
 }
 
 .ccard.mini .ccard-name {

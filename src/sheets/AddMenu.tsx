@@ -19,7 +19,7 @@ export function AddMenu() {
     }
     if (sources.length === 1) {
       useStore.getState().startShift(sources[0].id)
-      useUI.getState().showToast(`Смена «${sources[0].name}» началась`)
+      useUI.getState().showToast(`Таймер «${sources[0].name}» запущен`)
       useUI.getState().close()
     } else if (sources.length > 1) replace({ type: 'pickSource', purpose: 'shift' })
     else replace({ type: 'source' })
@@ -45,8 +45,8 @@ export function AddMenu() {
         </button>
         <button className={`add-tile ${shift ? 'live' : ''}`} onClick={startShift}>
           {shift ? <Square size={24} /> : <Play size={26} />}
-          <b>{shift ? 'Завершить' : 'Смена'}</b>
-          <small>{shift ? `${shiftSource?.name ?? ''} · ${clock(now - shift.startedAt)}` : 'засечь время'}</small>
+          <b>{shift ? 'Стоп' : 'Таймер'}</b>
+          <small>{shift ? `${shiftSource?.name ?? ''} · ${clock(now - shift.startedAt)}` : 'засечь работу'}</small>
         </button>
       </div>
     </Sheet>

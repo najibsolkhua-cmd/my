@@ -17,7 +17,7 @@ export function useToday(): string {
   return today()
 }
 
-/** «01:23:45» для таймера смены. */
+/** «01:23:45» для таймера работы. */
 export function clock(ms: number): string {
   const s = Math.max(0, Math.floor(ms / 1000))
   const h = Math.floor(s / 3600)

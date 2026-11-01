@@ -1,4 +1,4 @@
-import { ArrowDownRight, ArrowUpRight, ChevronRight, Play, Settings as Gear } from 'lucide-react'
+import { ArrowDownRight, ArrowUpRight, ChevronRight, HandCoins, Play, Settings as Gear } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { BarChart } from '../components/BarChart'
 import { Icon } from '../components/Icon'
@@ -15,6 +15,7 @@ import { humanDate } from '../lib/dates'
 import { money, moneyParts } from '../lib/format'
 import { levelProgress } from '../lib/levels'
 import { bucketSums, bucketTitle, currentBucket, earliestDate, filterRange, last7, periodRange, sum, workStats, type Period } from '../lib/stats'
+import { balanceOf, debtsSummary } from '../lib/money'
 import { useStore } from '../store'
 import { useUI } from '../ui'
 
@@ -34,8 +35,11 @@ export function Home() {
   const exp = useMemo(() => filterRange(expenses, range), [expenses, range.start, range.end])
   const incTotal = sum(inc)
   const expTotal = sum(exp)
-  const balance = incTotal - expTotal
+  const startCapital = useStore((s) => s.startCapital)
+  const debtsList = useStore((s) => s.debts)
+  const balance = balanceOf({ startCapital, incomes, expenses })
   const bp = moneyParts(balance)
+  const debts = useMemo(() => debtsSummary({ debts: debtsList, expenses }), [debtsList, expenses])
   const lp = levelProgress(last7(incomes, now))
 
   const recent = useMemo(() => {
@@ -52,7 +56,7 @@ export function Home() {
   const startShift = () => {
     if (activeSources.length === 1) {
       useStore.getState().startShift(activeSources[0].id)
-      useUI.getState().showToast(`Смена «${activeSources[0].name}» началась`)
+      useUI.getState().showToast(`Таймер «${activeSources[0].name}» запущен`)
     } else if (activeSources.length > 1) open({ type: 'pickSource', purpose: 'shift' })
     else open({ type: 'source' })
   }
@@ -94,32 +98,28 @@ export function Home() {
         </section>
       ) : (
         <>
-          <ShiftBanner />
-          <PeriodBar value={period} onChange={setPeriod} label={range.label} />
           <section className="panel hero">
-            <div className="hero-label">Остаток · {range.label.toLowerCase()}</div>
+            <div className="hero-top">
+              <span className="hero-label">На счету</span>
+              <button className="hero-capital" onClick={() => open({ type: 'capital' })}>
+                {startCapital ? `Стартовый капитал ${money(startCapital)}` : '+ Стартовый капитал'}
+              </button>
+            </div>
             <div className={`hero-amount ${bp.negative ? 'neg' : ''}`}>
               {bp.negative && '−'}
               {bp.int}
               <span>{bp.frac}</span>
               <em>₽</em>
             </div>
-            <div className="hero-pills">
-              <div className="pill plus">
-                <ArrowUpRight size={16} />
+            {debts.open.length > 0 && (
+              <button className="hero-debt" onClick={() => setTab('expenses')}>
+                <HandCoins size={16} />
                 <span>
-                  <small>Доход</small>
-                  {money(incTotal)}
+                  Долги <b>−{money(debts.left)}</b>
                 </span>
-              </div>
-              <div className="pill minus">
-                <ArrowDownRight size={16} />
-                <span>
-                  <small>Расход</small>
-                  {money(expTotal)}
-                </span>
-              </div>
-            </div>
+                <span className="muted">· чистыми {money(balance - debts.left)}</span>
+              </button>
+            )}
             <div className="hero-actions">
               <button onClick={() => open({ type: 'income' })}>
                 <ArrowUpRight size={20} />
@@ -131,10 +131,12 @@ export function Home() {
               </button>
               <button onClick={startShift} disabled={!!shift}>
                 <Play size={20} />
-                Смена
+                Таймер
               </button>
             </div>
           </section>
+
+          <ShiftBanner />
 
           <button className="panel level-card" onClick={() => setTab('levels')}>
             <LevelBadge level={lp.level} size={58} />
@@ -147,9 +149,27 @@ export function Home() {
             <ChevronRight size={20} className="muted" />
           </button>
 
+          <PeriodBar value={period} onChange={setPeriod} label={range.label} />
           <section className="panel">
             <div className="panel-head">
               <h3>Доходы и расходы</h3>
+              <small className={`muted ${incTotal - expTotal < 0 ? 'minus-text' : ''}`}>итог {money(incTotal - expTotal, true)}</small>
+            </div>
+            <div className="hero-pills period-pills">
+              <div className="pill plus">
+                <ArrowUpRight size={16} />
+                <span>
+                  <small>Доход · {range.label.toLowerCase()}</small>
+                  {money(incTotal)}
+                </span>
+              </div>
+              <div className="pill minus">
+                <ArrowDownRight size={16} />
+                <span>
+                  <small>Расход · {range.label.toLowerCase()}</small>
+                  {money(expTotal)}
+                </span>
+              </div>
             </div>
             <BarChart
               labels={range.buckets.map((b) => b.label)}
@@ -170,7 +190,7 @@ export function Home() {
                   Все
                 </button>
               </div>
-              <div className="mini-cards" data-noswipe>
+              <div className="mini-cards">
                 {activeSources.map((s) => {
                   const st = workStats(inc.filter((x) => x.sourceId === s.id))
                   return <IncomeCard key={s.id} source={s} total={st.total} minutes={st.minutes} rate={st.rate} live={shift?.sourceId === s.id} className="mini" onClick={() => open({ type: 'card', sourceId: s.id })} />

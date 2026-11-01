@@ -3,6 +3,7 @@ import { writeFileSync } from 'node:fs'
 import { achievements, growthRun, longestStreak, plusMonths, GROUPS } from '../achievements'
 import { OLD_TO_NEW_LEVEL, LEVELS } from '../levels'
 import { migrateData, validateBackup } from '../../store'
+import { balanceOf, debtStatus, debtsSummary } from '../money'
 import { planNotifications, IDS } from '../notifyPlan'
 import { DEFAULT_SETTINGS, initialData, type AppData } from '../../store'
 import { CARD_COLORS, PATTERN_COUNT, PATTERN_NAMES } from '../../data/palette'
@@ -40,7 +41,7 @@ describe('уведомления', () => {
     const d = base({ shift: { sourceId: 's', startedAt }, sources: [{ id: 's', name: 'Доставка', type: 'side', icon: 'Bike', color: 'sand', pattern: 0, createdAt: 0 }] })
     const shift = planNotifications(d, now).filter((n) => n.id >= IDS.shift && n.id < IDS.weekly)
     expect(shift.map((n) => n.at.getHours())).toEqual([15, 19])
-    expect(shift[0].title).toBe('Смена «Доставка» идёт уже 8 ч')
+    expect(shift[0].title).toBe('Работа «Доставка» идёт уже 8 ч')
   })
   it('итоги недели — ближайший понедельник 10:00', () => {
     const w = planNotifications(base({ incomes: [income('2026-10-27', 25000)] }), now).find((n) => n.id === IDS.weekly)!
@@ -67,9 +68,9 @@ describe('награды', () => {
     expect(a.find((x) => x.id === 'h10')!.done).toBe(true)
     expect(a.find((x) => x.id === 'h100')!.value).toBe(10)
   })
-  it('70 наград с разными id, все в известных группах', () => {
+  it('76 наград с разными id, все в известных группах', () => {
     const list = achievements(base(), '2026-10-29')
-    expect(new Set(list.map((a) => a.id)).size).toBe(70)
+    expect(new Set(list.map((a) => a.id)).size).toBe(76)
     expect(list.filter((a) => a.secret)).toHaveLength(6)
     for (const a of list) expect(GROUPS).toContain(a.group)
   })
@@ -96,6 +97,50 @@ describe('награды', () => {
   it('камбэк после перерыва в неделю', () => {
     const a = achievements(base({ incomes: [income('2026-10-01', 1), income('2026-10-09', 1)] }), '2026-10-29')
     expect(a.find((x) => x.id === 'comeback')!.done).toBe(true)
+  })
+})
+
+describe('счёт и долги', () => {
+  const debt = (id: string, amount: number) => ({ id, title: id, amount, createdAt: 0 })
+  const pay = (debtId: string, amount: number, id = `${debtId}-${amount}`) => ({ id, categoryId: 'c-debt', amount, date: '2026-10-20', createdAt: 0, debtId })
+
+  it('на счету = стартовый капитал + доходы − расходы', () => {
+    expect(balanceOf({ startCapital: 50_000, incomes: [income('2026-10-01', 10_000)], expenses: [pay('x', 3_000)] })).toBe(57_000)
+  })
+  it('платежи списываются с долга', () => {
+    const s = debtStatus(debt('a', 10_000), [pay('a', 4_000), pay('a', 1_000), pay('b', 9_999)])
+    expect(s).toMatchObject({ paid: 5_000, left: 5_000, ratio: 0.5, closed: false, payments: 2 })
+    expect(debtStatus(debt('a', 10_000), [pay('a', 12_000)])).toMatchObject({ left: 0, closed: true })
+  })
+  it('сводка: осталось погасить по открытым долгам', () => {
+    const s = debtsSummary({ debts: [debt('a', 10_000), debt('b', 3_000)], expenses: [pay('a', 4_000), pay('b', 3_000)] })
+    expect(s.left).toBe(6_000)
+    expect(s.open.map((x) => x.debt.id)).toEqual(['a'])
+  })
+  it('за взятый долг наград нет — только за погашение', () => {
+    const got = (d: Partial<AppData>) => achievements(base(d), '2026-10-29').filter((a) => a.group === 'Долги' && a.done).map((a) => a.id)
+    expect(got({ debts: [debt('a', 50_000)] })).toEqual([])
+    expect(got({ debts: [debt('a', 50_000)], expenses: [pay('a', 1_000)] })).toEqual(['debtPay1'])
+  })
+  it('«Свободный человек» — только когда погашены все долги', () => {
+    const free = (d: Partial<AppData>) => achievements(base(d), '2026-10-29').find((a) => a.id === 'free')!.done
+    expect(free({ debts: [debt('a', 5_000)], expenses: [pay('a', 5_000)] })).toBe(true)
+    expect(free({ debts: [debt('a', 5_000), debt('b', 2_000)], expenses: [pay('a', 5_000)] })).toBe(false)
+    expect(free({ debts: [debt('a', 5_000), debt('b', 2_000)], expenses: [pay('a', 5_000), pay('b', 2_000)] })).toBe(true)
+    expect(free({})).toBe(false)
+  })
+  it('копия с долгами и капиталом восстанавливается', () => {
+    const res = validateBackup({ version: 4, data: { ...initialData(), startCapital: 1234, debts: [debt('a', 100)], expenses: [pay('a', 50), pay('ghost', 10)] } }) as AppData
+    expect(res.startCapital).toBe(1234)
+    expect(res.debts).toHaveLength(1)
+    expect(res.expenses.find((x) => x.debtId === 'ghost')).toBeUndefined() // ссылка на несуществующий долг снимается
+    expect(res.categories.some((c) => c.id === 'c-debt')).toBe(true)
+  })
+  it('старые данные получают капитал 0, пустые долги и категорию «Долги»', () => {
+    const st = migrateData({ ...initialData(), categories: initialData().categories.filter((c) => c.id !== 'c-debt'), startCapital: undefined, debts: undefined }, 3)
+    expect(st.startCapital).toBe(0)
+    expect(st.debts).toEqual([])
+    expect(st.categories.some((c) => c.id === 'c-debt')).toBe(true)
   })
 })
 

@@ -37,6 +37,16 @@ export interface Expense {
   amount: number
   date: DateStr
   note?: string
+  /** платёж в счёт долга */
+  debtId?: string
+  createdAt: number
+}
+
+/** Долг: сколько и за что. Погашается расходами с пометкой «в счёт долга». */
+export interface Debt {
+  id: string
+  title: string
+  amount: number
   createdAt: number
 }
 

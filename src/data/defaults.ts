@@ -36,5 +36,6 @@ export const DEFAULT_CATEGORIES: Category[] = [
   { id: 'c-kids', name: 'Дети', icon: 'Baby', color: '#FB923C' },
   { id: 'c-pets', name: 'Питомцы', icon: 'PawPrint', color: '#78716C' },
   { id: 'c-credit', name: 'Кредиты', icon: 'CreditCard', color: '#64748B' },
+  { id: 'c-debt', name: 'Долги', icon: 'HandCoins', color: '#0EA5E9' },
   { id: 'c-other', name: 'Другое', icon: 'Receipt', color: '#94A3B8' },
 ]

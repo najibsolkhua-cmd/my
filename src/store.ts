@@ -5,7 +5,7 @@ import { round2 } from './lib/format'
 import { uid } from './lib/ids'
 import { isNative } from './platform'
 import { OLD_TO_NEW_LEVEL } from './lib/levels'
-import type { Category, Expense, Goal, Income, Settings, Shift, Source } from './types'
+import type { Category, Debt, Expense, Goal, Income, Settings, Shift, Source } from './types'
 
 export interface AppData {
   sources: Source[]
@@ -23,6 +23,9 @@ export interface AppData {
   /** счётчики для наград */
   counters: Counters
   settings: Settings
+  /** деньги, которые были до начала учёта — входят в «На счету» */
+  startCapital: number
+  debts: Debt[]
 }
 
 export interface Counters {
@@ -69,11 +72,22 @@ interface Actions {
   setSeenLevel: (n: number) => void
   setEarned: (ids: string[]) => void
   setSettings: (patch: Partial<Settings>) => void
+  setStartCapital: (n: number) => void
+  addDebt: (d: New<Debt>) => string
+  updateDebt: (id: string, patch: Partial<Debt>) => void
+  deleteDebt: (id: string) => void
   replaceAll: (data: AppData) => void
   resetAll: () => void
 }
 
 export const FALLBACK_CATEGORY = 'c-other'
+export const DEBT_CATEGORY = 'c-debt'
+
+/** Категория «Долги» нужна для платежей по долгам — добавляем, если её нет. */
+function withDebtCategory(categories: Category[]): Category[] {
+  if (categories.some((c) => c.id === DEBT_CATEGORY)) return categories
+  return [...categories, DEFAULT_CATEGORIES.find((c) => c.id === DEBT_CATEGORY)!]
+}
 
 // В приложении на телефоне данные лежат в системном хранилище (UserDefaults / SharedPreferences):
 // его не чистит система, и оно попадает в резервную копию телефона.
@@ -111,6 +125,8 @@ export const initialData = (): AppData => ({
   earned: null,
   counters: { ...EMPTY_COUNTERS },
   settings: { ...DEFAULT_SETTINGS },
+  startCapital: 0,
+  debts: [],
 })
 
 const clean = (n: number) => round2(Math.max(0, n))
@@ -129,6 +145,11 @@ export function migrateData(persisted: unknown, version: number): AppData {
     st.bestLevel = map(st.bestLevel)
     st.counters = { ...EMPTY_COUNTERS, ...(st.counters ?? {}) }
   }
+  if (version < 4) {
+    st.startCapital = 0
+    st.debts = []
+  }
+  st.categories = withDebtCategory(st.categories ?? [])
   st.settings = { ...DEFAULT_SETTINGS, ...(st.settings ?? {}) }
   return st as AppData
 }
@@ -201,6 +222,19 @@ export const useStore = create<AppData & Actions>()(
 
       setSeenLevel: (n) => set((st) => ({ seenLevel: n, bestLevel: Math.max(st.bestLevel, n) })),
       setEarned: (ids) => set({ earned: ids }),
+      setStartCapital: (n) => set({ startCapital: round2(Number.isFinite(n) ? n : 0) }),
+      addDebt: (x) => {
+        const id = uid()
+        set((st) => ({ debts: [...st.debts, { ...x, amount: clean(x.amount), id, createdAt: Date.now() }] }))
+        return id
+      },
+      updateDebt: (id, patch) => set((st) => ({ debts: st.debts.map((x) => (x.id === id ? { ...x, ...patch } : x)) })),
+      // платежи по удалённому долгу остаются обычными расходами
+      deleteDebt: (id) =>
+        set((st) => ({
+          debts: st.debts.filter((x) => x.id !== id),
+          expenses: st.expenses.map((x) => (x.debtId === id ? { ...x, debtId: undefined } : x)),
+        })),
       setSettings: (patch) => set((st) => ({ settings: { ...st.settings, ...patch } })),
       // настройки — свойство телефона, а не данных: при восстановлении копии их не трогаем
       replaceAll: (data) => set((st) => ({ ...initialData(), ...data, settings: st.settings, shift: null })),
@@ -208,7 +242,7 @@ export const useStore = create<AppData & Actions>()(
     }),
     {
       name: 'kapital-data',
-      version: 3,
+      version: 4,
       storage: createJSONStorage(() => (isNative ? nativeStorage : localStorage)),
       migrate: migrateData,
       partialize: (st): AppData => ({
@@ -223,6 +257,8 @@ export const useStore = create<AppData & Actions>()(
         earned: st.earned,
         counters: st.counters,
         settings: st.settings,
+        startCapital: st.startCapital,
+        debts: st.debts,
       }),
     },
   ),
@@ -231,8 +267,8 @@ export const useStore = create<AppData & Actions>()(
 /** Достаёт только данные (без функций) — для экспорта. */
 export function snapshot(): AppData {
   const st = useStore.getState()
-  const { sources, incomes, categories, expenses, goals, shift, seenLevel, bestLevel, earned, counters, settings } = st
-  return { sources, incomes, categories, expenses, goals, shift, seenLevel, bestLevel, earned, counters, settings }
+  const { sources, incomes, categories, expenses, goals, shift, seenLevel, bestLevel, earned, counters, settings, startCapital, debts } = st
+  return { sources, incomes, categories, expenses, goals, shift, seenLevel, bestLevel, earned, counters, settings, startCapital, debts }
 }
 
 const isArr = Array.isArray
@@ -253,14 +289,15 @@ export function validateBackup(raw: unknown): AppData | string {
   for (const x of d.incomes) if (!isStr(x?.id) || !isStr(x?.sourceId) || !isNum(x?.amount) || !isDate(x?.date)) return 'Повреждены записи доходов'
   for (const c of d.categories) if (!isStr(c?.id) || !isStr(c?.name)) return 'Повреждены категории'
   for (const x of d.expenses) if (!isStr(x?.id) || !isStr(x?.categoryId) || !isNum(x?.amount) || !isDate(x?.date)) return 'Повреждены записи расходов'
-  const categories = d.categories.some((c) => c.id === FALLBACK_CATEGORY)
-    ? d.categories
-    : [...d.categories, DEFAULT_CATEGORIES.find((c) => c.id === FALLBACK_CATEGORY)!]
+  const categories = withDebtCategory(
+    d.categories.some((c) => c.id === FALLBACK_CATEGORY) ? d.categories : [...d.categories, DEFAULT_CATEGORIES.find((c) => c.id === FALLBACK_CATEGORY)!],
+  )
+  const debts = isArr(d.debts) ? d.debts.filter((x) => isStr(x?.id) && isStr(x?.title) && isNum(x?.amount)) : []
   return {
     sources: d.sources,
     incomes: d.incomes.map((x) => ({ ...x, minutes: isNum(x.minutes) ? x.minutes : 0, createdAt: isNum(x.createdAt) ? x.createdAt : 0 })),
     categories,
-    expenses: d.expenses.map((x) => ({ ...x, createdAt: isNum(x.createdAt) ? x.createdAt : 0 })),
+    expenses: d.expenses.map((x) => ({ ...x, createdAt: isNum(x.createdAt) ? x.createdAt : 0, debtId: isStr(x.debtId) && debts.some((y) => y.id === x.debtId) ? x.debtId : undefined })),
     goals: isArr(d.goals) ? d.goals : [],
     shift: null,
     seenLevel: level(d.seenLevel),
@@ -268,5 +305,7 @@ export function validateBackup(raw: unknown): AppData | string {
     earned: isArr(d.earned) ? d.earned.filter(isStr) : null,
     counters: d.counters && isNum(d.counters.shifts) && isNum(d.counters.longestShift) ? { ...EMPTY_COUNTERS, ...d.counters } : { ...EMPTY_COUNTERS },
     settings: { ...DEFAULT_SETTINGS },
+    startCapital: isNum(d.startCapital) ? d.startCapital : 0,
+    debts: debts.map((x) => ({ ...x, createdAt: isNum(x.createdAt) ? x.createdAt : 0 })),
   }
 }

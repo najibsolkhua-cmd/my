@@ -55,11 +55,11 @@ export function planNotifications(d: AppData, now: Date): PlannedNotification[] 
   }
 
   if (s.shiftAlerts && d.shift) {
-    const name = d.sources.find((x) => x.id === d.shift!.sourceId)?.name ?? 'Смена'
+    const name = d.sources.find((x) => x.id === d.shift!.sourceId)?.name ?? 'Работа'
     ;[4, 8, 12].forEach((h, i) => {
       const when = new Date(d.shift!.startedAt + h * 3600_000)
       if (when > now)
-        out.push({ id: IDS.shift + i, title: `Смена «${name}» идёт уже ${h} ч`, body: 'Не забудь завершить её в приложении, чтобы время записалось', at: when })
+        out.push({ id: IDS.shift + i, title: `Работа «${name}» идёт уже ${h} ч`, body: 'Не забудь остановить таймер, чтобы время записалось', at: when })
     })
   }
 

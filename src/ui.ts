@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { Category, Expense, Goal, Income, Source } from './types'
+import type { Category, Debt, Expense, Goal, Income, Source } from './types'
 
 export type Tab = 'home' | 'cards' | 'expenses' | 'levels'
 export const TABS: Tab[] = ['home', 'cards', 'expenses', 'levels']
@@ -17,7 +17,9 @@ function savedTab(): Tab {
 export type Layer =
   | { type: 'add' }
   | { type: 'income'; edit?: Income; sourceId?: string; minutes?: number }
-  | { type: 'expense'; edit?: Expense; categoryId?: string }
+  | { type: 'expense'; edit?: Expense; categoryId?: string; debtId?: string; amount?: number }
+  | { type: 'capital' }
+  | { type: 'debt'; edit?: Debt }
   | { type: 'source'; edit?: Source; onSaved?: (id: string) => void }
   | { type: 'category'; edit?: Category; onSaved?: (id: string) => void }
   | { type: 'goal'; edit?: Goal }
