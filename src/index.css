@@ -66,7 +66,7 @@ textarea {
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(120% 60% at 50% calc(var(--safe-t) - 8%), #1f4f97 0%, rgba(31, 79, 151, 0) 60%),
+    radial-gradient(120% 60% at 50% -10%, #1f4f97 0%, rgba(31, 79, 151, 0) 60%),
     radial-gradient(80% 50% at 100% 100%, #0f2c63 0%, rgba(15, 44, 99, 0) 70%),
     var(--bg);
 }
@@ -116,19 +116,6 @@ p {
 
 .plus-text {
   color: var(--plus);
-}
-
-/* iOS 26 размывает верх веб-приложения «жидким стеклом». Сплошная закреплённая
-   полоса у верхнего края отключает это размытие, а экраны прокручиваются под ней. */
-.status-bar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: max(12px, var(--safe-t));
-  background: #071430;
-  z-index: 35;
-  pointer-events: none;
 }
 
 /* Всё приложение — один фиксированный слой на всю высоту экрана;
@@ -268,7 +255,7 @@ main.behind {
 }
 
 .screen {
-  padding: calc(var(--safe-t) + 14px) 16px calc(112px + var(--safe-b));
+  padding: calc(var(--safe-t) + 10px) 16px calc(112px + var(--safe-b));
   display: flex;
   flex-direction: column;
   gap: 16px;
